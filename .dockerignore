@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Build artifacts
+build/
+tmp/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+test/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker
+Dockerfile*
+.dockerignore
+
+# Scripts
+
+# Configuration files (except the main ones)
+*.conf
+!tangent.conf
+!tangent.docker.conf
+!tansivesrv.conf
+
+# Go cache
+go.sum
+
+# Temporary files
+*.tmp
+*.temp 

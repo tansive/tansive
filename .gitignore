@@ -1,0 +1,63 @@
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# Compiled Go files
+*.exe
+*.test
+*.prof
+*.out
+*.cast
+
+# Build directories
+build/
+dist/
+tmp/
+
+# Dependency directories
+vendor/
+.cache/
+.bin/
+Godeps/
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# Logs and temporary files
+*.log
+*.log.*
+*.tmp
+.DS_Store
+
+# Environment files
+.env
+
+# Output binaries
+/bin/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+bin/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+*.egg

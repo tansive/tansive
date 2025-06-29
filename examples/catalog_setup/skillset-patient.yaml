@@ -1,0 +1,134 @@
+apiVersion: 0.1.0-alpha.1
+kind: SkillSet
+metadata:
+  name: health-record-demo
+  catalog: demo-catalog
+  path: /demo-skillsets
+spec:
+  version: "0.1.0"
+  sources:
+    - name: resolve-patient-id
+      runner: "system.stdiorunner"
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "node"
+        script: "resolve-patient-id.js"
+        security:
+          type: default  # could be one of: default, sandboxed
+    - name: patient-bloodwork
+      runner: "system.stdiorunner"
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "python"
+        script: "patient_bloodwork.py"
+        security:
+          type: default  # could be one of: default, sandboxed
+    - name: agent-script
+      runner: "system.stdiorunner"
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "python"
+        script: "run-llm.py"
+        security:
+          type: default  # could be one of: default, sandboxed
+  context:
+    - name: claude
+      schema:
+        type: object
+        properties:
+          apiKey:
+            type: string
+          model:
+            type: string
+        required:
+          - apiKey
+          - model
+      value:
+        apiKey: {{ .ENV.CLAUDE_API_KEY }}
+        model: claude-3-7-sonnet-latest
+    - name: gpt4o
+      schema:
+        type: object
+        properties:
+          apiKey:
+            type: string
+          model:
+            type: string
+        required:
+          - apiKey
+          - model
+      value:
+        apiKey: {{ .ENV.OPENAI_API_KEY }}
+        model: gpt-4o
+  skills:
+    - name: resolve-patient-id
+      source: resolve-patient-id
+      description: "Resolve patient ID"
+      inputSchema:
+        type: object
+        properties:
+          name:
+            type: string
+            description: "Patient name"
+        required:
+          - name
+      outputSchema:
+        type: string
+        description: "Patient ID"
+      exportedActions:
+        - patient.id.resolve
+      annotations:
+        llm:description: |
+          Resolve the patient ID from the patient's name.
+          This skill is used to resolve the patient ID from the patient's name.
+          It requires the patient name as input and will return the patient ID in json.
+    - name: patient-bloodwork
+      source: patient-bloodwork
+      description: "Get patient bloodwork"
+      inputSchema:
+        type: object
+        properties:
+          patient_id:
+            type: string
+            description: "Patient ID"
+        required:
+          - patient_id
+      outputSchema:
+        type: object
+        description: "Raw output from patient bloodwork in json"
+      transform: |
+        function(session, input) {
+          if (session.patient_id != input.patient_id) {
+            throw new Error('Unauthorized to access patient bloodwork for patient ' + input.patient_id)
+          }
+          return {
+            patient_id: input.patient_id
+          }
+        }
+      exportedActions:
+        - patient.labresults.get
+      annotations:
+        llm:description: |
+          Get patient bloodwork from the patient's health record.
+          This skill is used to retrieve the patient's bloodwork from the patient's health record.
+          It requires the patient ID as input and will return the patient's bloodwork in json.
+    - name: health-record-agent
+      source: agent-script
+      description: "Health record agent"
+      inputSchema:
+        type: object
+        properties:
+          prompt:
+            type: string
+            description: "Description of the health record to query"
+        required:
+          - prompt
+      outputSchema:
+        type: string
+        description: "Health record query results"
+      exportedActions:
+        - patient.labresults.get
+      annotations:
+        llmx:description: |
+          A health record agent that can query the patient's health record.
+          This skill accepts natural language descriptions of health record queries and returns the results in json.

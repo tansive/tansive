@@ -1,0 +1,248 @@
+openapi: 3.1.0
+info:
+  title: Tansive SkillSet (TM) SDK API
+  version: 0.1.0
+  description: |
+    API for interacting with Tansive skills and tools.
+    
+    Note: This API is served over a Unix Domain Socket (UDS). The generated client must be configured to use the UDS at the appropriate path.
+    The default socket path is:
+    - $HOME/.local/run/tangent.service (fallback)
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost
+    description: |
+      Unix Domain Socket server. The generated client must be configured to use the UDS transport.
+      The actual socket path is determined by the environment or defaults to $HOME/.local/run/tangent.service
+
+paths:
+  /skill-invocations:
+    post:
+      summary: Invoke a skill
+      description: Executes a skill with the provided arguments
+      operationId: invokeSkill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillInvocation'
+      responses:
+        '200':
+          description: Successful skill invocation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /tools:
+    get:
+      summary: Get available tools
+      description: Retrieves the list of available LLM tools for a session
+      operationId: getTools
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9-_]+$'
+      responses:
+        '200':
+          description: List of available tools
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LLMTool'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /context:
+    get:
+      summary: Get context
+      description: Retrieves context information for a session
+      operationId: getContext
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9-_]+$'
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9-_]+$'
+      responses:
+        '200':
+          description: Context information
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+components:
+  schemas:
+    LLMTool:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the tool
+          pattern: '^[a-zA-Z0-9-_]+$'
+        description:
+          type: string
+          description: Description of the tool
+        inputSchema:
+          type: object
+          description: JSON schema for tool input
+          additionalProperties: true
+        outputSchema:
+          type: object
+          description: JSON schema for tool output
+          additionalProperties: true
+      required:
+        - name
+
+    SkillInvocation:
+      type: object
+      properties:
+        session_id:
+          type: string
+          description: Unique identifier for the session
+          pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          format: uuid
+        invocation_id:
+          type: string
+          description: Unique identifier for the invocation
+          pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          format: uuid
+        skill_name:
+          type: string
+          description: Name of the skill to invoke
+          pattern: '^[a-zA-Z0-9-_]+$'
+        args:
+          type: object
+          description: Arguments for the skill
+          additionalProperties: true
+      required:
+        - session_id
+        - invocation_id
+        - skill_name
+        - args
+
+    SkillResult:
+      type: object
+      properties:
+        invocation_id:
+          type: string
+          description: Unique identifier for the invocation
+          pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          format: uuid
+        output:
+          type: object
+          description: Output from the skill execution
+          additionalProperties: true
+      required:
+        - invocation_id
+        - output
+
+    RunMode:
+      type: string
+      enum:
+        - interactive
+        - batch
+      description: Mode of operation for skill execution
+
+    SkillInputArgs:
+      type: object
+      properties:
+        invocationID:
+          type: string
+          pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          format: uuid
+        serviceEndpoint:
+          type: string
+          format: uri
+        runMode:
+          $ref: '#/components/schemas/RunMode'
+        sessionID:
+          type: string
+          pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          format: uuid
+        skillName:
+          type: string
+          pattern: '^[a-zA-Z0-9-_]+$'
+        inputArgs:
+          type: object
+          additionalProperties: true
+        sessionVariables:
+          type: object
+          additionalProperties: true
+      required:
+        - invocationID
+        - serviceEndpoint
+        - runMode
+        - sessionID
+        - skillName
+        - inputArgs 

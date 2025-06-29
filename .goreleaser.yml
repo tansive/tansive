@@ -1,0 +1,189 @@
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+
+builds:
+  - id: tansivesrv
+    main: ./cmd/tansivesrv
+    binary: tansivesrv
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+  - id: tangent
+    main: ./cmd/tangent
+    binary: tangent
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+  - id: tansive-cli
+    main: ./cmd/tansive-cli
+    binary: tansive
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: tansivesrv
+    builds:
+      - tansivesrv
+    name_template: "{{ .Binary }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - tansivesrv.conf
+
+  - id: tangent
+    builds:
+      - tangent
+    name_template: "{{ .Binary }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - scripts/docker/conf/tangent.docker.conf
+      - examples/skillset_scripts/
+
+  - id: tansive-cli
+    builds:
+      - tansive-cli
+    name_template: "{{ .Binary }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+
+dockers:
+  - image_templates:
+      - "ghcr.io/tansive/tansive/tansivesrv:{{ .Version }}"
+      - "ghcr.io/tansive/tansive/tansivesrv:latest"
+    dockerfile: scripts/docker/Dockerfile.tansivesrv
+    use: docker
+    build_flag_templates:
+      - "--platform=linux/amd64,linux/arm64"
+      - "--no-cache"
+    extra_files:
+      - tansivesrv.conf
+      - go.mod
+      - go.sum
+      - cmd/
+      - internal/
+      - pkg/
+
+  - image_templates:
+      - "ghcr.io/tansive/tansive/tangent-minimal:{{ .Version }}"
+      - "ghcr.io/tansive/tansive/tangent-minimal:latest"
+    dockerfile: scripts/docker/Dockerfile.tangent.minimal
+    use: docker
+    build_flag_templates:
+      - "--platform=linux/amd64,linux/arm64"
+      - "--no-cache"
+    extra_files:
+      - scripts/docker/conf/tangent.docker.conf
+      - examples/skillset_scripts/
+      - go.mod
+      - go.sum
+      - cmd/
+      - internal/
+      - pkg/
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  groups:
+    - title: "🚀 Features"
+      regexp: "^feat:"
+    - title: "🐛 Fixes"
+      regexp: "^fix:"
+    - title: "🛠 Refactoring"
+      regexp: "^refactor:"
+    - title: "📝 Documentation"
+      regexp: "^docs:"
+    - title: "✅ Tests"
+      regexp: "^test:"
+    - title: "🔧 Chore"
+      regexp: "^chore:"
+    - title: "Other Changes"
+      regexp: ".*"
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
+
+
+release:
+  github:
+    owner: tansive
+    name: tansive
+  draft: false
+  prerelease: "true"
+  name_template: "{{ .Tag }}"
+  footer: |
+    ## Installation
+
+    ### Binary
+
+    Download the appropriate binary for your platform from the assets above.
+
+    ### Docker
+
+    ```bash
+    # Pull the latest images
+    docker pull ghcr.io/${GITHUB_REPOSITORY}/tansivesrv:latest
+    docker pull ghcr.io/${GITHUB_REPOSITORY}/tangent-minimal:latest
+    ```

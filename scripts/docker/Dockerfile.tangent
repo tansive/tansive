@@ -1,0 +1,64 @@
+# Builder stage
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
+
+WORKDIR /app
+
+COPY go.mod ./
+COPY . .
+
+RUN go mod tidy && go mod download
+
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o tangent ./cmd/tangent
+
+# Use a smaller base image
+FROM python:3.12.9-slim-bookworm
+
+# Install only essential system packages (no build tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash curl git ca-certificates jq \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN ln -s /usr/bin/node /usr/local/bin/node || true
+
+# Install only essential Python packages (PyTorch removed - install separately if needed)
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir \
+    openai langchain \
+    pandas numpy \
+    fastapi uvicorn aiohttp tansive-skillset-sdk
+
+# Install only essential TypeScript tools
+RUN npm install -g typescript
+
+# Install Tangent
+RUN mkdir -p /var/tangent/scripts /etc/tansive
+
+COPY --from=builder /app/tangent /usr/local/bin/tangent
+
+COPY conf/tangent.docker.conf /etc/tansive/tangent.conf
+COPY ../../examples/skillset_scripts/ /var/tangent/scripts/
+
+# Create a non-root user for running the service
+RUN useradd -r -s /bin/bash -d /var/tangent tangent && \
+    chown -R tangent:tangent /var/tangent /etc/tansive
+
+# Switch to non-root user
+USER tangent
+
+EXPOSE 8468
+
+ENV WORKING_DIR=/var/tangent
+ENV SCRIPT_DIR=/var/tangent/scripts
+
+VOLUME ["/var/tangent", "/var/tangent/scripts"]
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f https://localhost:8468/health || exit 1
+
+# Default command
+CMD ["/usr/local/bin/tangent", "-config", "/etc/tansive/tangent.conf"] 

@@ -1,0 +1,140 @@
+apiVersion: 0.1.0-alpha.1
+kind: SkillSet
+metadata:
+  name: kubernetes-demo
+  catalog: example-catalog
+  path: /demo-skillsets
+spec:
+  version: "0.1.0"
+  sources:
+    - name: my-agent
+      runner: "system.stdiorunner"
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "python"
+        runtimeConfig:
+          key: "value"
+        env:
+          TEST_VAR: "test_value"
+        script: "run-llm.py"
+        security:
+          type: default  # could be one of: default, sandboxed
+    - name: my-tools-script
+      runner: "system.stdiorunner"
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "bash"
+        runtimeConfig:
+          key: "value"
+        env:
+          TEST_VAR: "test_value"
+        script: "tools_script.sh"
+        security:
+          type: default  # could be one of: default, sandboxed
+  context:
+    - name: kubeconfig
+      schema:
+        type: object
+        properties:
+          kubeconfig:
+            type: string
+            format: binary
+        required:
+          - kubeconfig
+      value:
+        kubeconfig: {{ .ENV.KUBECONFIG }}
+    - name: claude
+      schema:
+        type: object
+        properties:
+          apiKey:
+            type: string
+          model:
+            type: string
+        required:
+          - apiKey
+          - model
+      value:
+        apiKey: {{ .ENV.CLAUDE_API_KEY }}
+        model: claude-3-7-sonnet-latest
+    - name: gpt4o
+      schema:
+        type: object
+        properties:
+          apiKey:
+            type: string
+          model:
+            type: string
+        required:
+          - apiKey
+          - model
+      value:
+        apiKey: {{ .ENV.OPENAI_API_KEY }}
+        model: gpt-4o
+  skills:
+    - name: list_pods
+      source: my-tools-script
+      description: "List pods in the cluster"
+      inputSchema:
+        type: object
+        properties:
+          labelSelector:
+            type: string
+            description: "Kubernetes label selector to filter pods"
+        required: []
+      outputSchema:
+        type: string
+        description: "Raw output from listing pods, typically from 'kubectl get pods'"
+      exportedActions:
+        - kubernetes.pods.list
+      annotations:
+        llm:description: |
+          Lists all pods in the currently active Kubernetes cluster.
+          This skill supports an optional labelSelector argument to filter pods by label.
+          It is a read-only operation that provides visibility into running or failing workloads.
+          The output is a plain-text summary similar to kubectl get pods. Use this to diagnose the current state of the system.
+    - name: restart_deployment
+      source: my-tools-script
+      description: "Restart a deployment"
+      inputSchema:
+        type: object
+        properties:
+          deployment:
+            type: string
+        required:
+          - deployment
+      outputSchema:
+        type: string
+        description: "Raw output from restarting the deployment, typically from 'kubectl rollout restart deployment <deployment>'"
+      exportedActions:
+        - kubernetes.deployments.restart
+      annotations:
+        llm:description: |
+          Performs a rollout restart of a Kubernetes deployment.
+          This skill is used to trigger a fresh rollout of pods associated with a deployment,
+          typically to recover from failures or apply configuration changes.
+          It requires the deployment name as input and will execute the equivalent of kubectl rollout restart deployment <name>.
+    - name: k8s_troubleshooter
+      source: my-agent
+      description: "Troubleshoot kubernetes issues"
+      inputSchema:
+        type: object
+        properties:
+          prompt:
+            type: string
+            description: "Description of the issue to troubleshoot"
+        required:
+          - prompt
+      outputSchema:
+        type: string
+        description: "Troubleshooting steps and recommendations"
+      exportedActions:
+        - kubernetes.troubleshoot
+      annotations:
+        llmx:description: |
+          A Kubernetes troubleshooting assistant that helps diagnose and resolve issues in your cluster.
+          This skill accepts natural language descriptions of problems and leverages knowledge of
+          Kubernetes concepts and common failure patterns to provide targeted diagnostic steps and remediation advice.
+          It can help identify issues related to pod failures, networking problems, resource constraints,
+          configuration errors and more. The assistant will analyze the situation and suggest appropriate kubectl
+          commands and configuration changes to resolve the issue.
