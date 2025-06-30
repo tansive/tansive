@@ -69,6 +69,7 @@ Use clear, conventional commit messages (`feat:`, `fix:`, `docs:`, etc.)
    ```
 
 8. **Open a pull request**
+
    Describe your changes clearly and reference any relevant issues.
    Before we can merge your contribution, you’ll need to sign our **Individual Contributor License Agreement (ICLA)**. We use CLA Assistant to manage contributor agreements. You’ll see a prompt to sign when you open your first pull request. If you’d like to read it in advance, see [ICLA](ICLA).
 
