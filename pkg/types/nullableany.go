@@ -1,3 +1,4 @@
+// Package types provides nullable type implementations for handling optional values.
 package types
 
 import (
@@ -6,15 +7,23 @@ import (
 	"errors"
 )
 
+// NullableAny represents a nullable value that can hold any JSON-serializable type.
+// It provides type-safe handling of optional values with proper JSON marshaling/unmarshaling.
+// The value is stored internally as JSON to maintain type fidelity across serialization.
 type NullableAny struct {
 	value json.RawMessage
 	valid bool // Valid is true if Value is not nil
 }
 
+// IsNil returns true if the NullableAny is null/nil, false otherwise.
+// This implements the Nullable interface.
 func (ns NullableAny) IsNil() bool {
 	return !ns.valid
 }
 
+// Set assigns a value to the NullableAny, converting it to JSON format.
+// Accepts any JSON-serializable type and validates the resulting JSON.
+// Returns an error if the value cannot be marshaled to JSON.
 func (ns *NullableAny) Set(value any) error {
 	var jsonValue json.RawMessage
 
@@ -58,6 +67,9 @@ func (ns *NullableAny) Set(value any) error {
 	return nil
 }
 
+// Get returns the underlying value as interface{}.
+// Returns nil if the NullableAny is null/nil.
+// The value is unmarshaled from the internal JSON representation.
 func (ns NullableAny) Get() any {
 	if ns.valid {
 		var v any
@@ -70,6 +82,8 @@ func (ns NullableAny) Get() any {
 	return nil
 }
 
+// Equals compares two NullableAny values for equality.
+// Returns true if both values are null or if both have the same JSON representation.
 func (ns NullableAny) Equals(value NullableAny) bool {
 	if ns.valid && value.valid {
 		return bytes.Equal(ns.value, value.value)
@@ -77,6 +91,9 @@ func (ns NullableAny) Equals(value NullableAny) bool {
 	return ns.valid == value.valid
 }
 
+// GetAs unmarshals the value into the provided target interface.
+// Returns an error if the NullableAny is null/nil or if unmarshaling fails.
+// The target must be a pointer to the desired type.
 func (ns NullableAny) GetAs(v any) error {
 	if ns.valid {
 		return json.Unmarshal(ns.value, v)
@@ -84,7 +101,8 @@ func (ns NullableAny) GetAs(v any) error {
 	return errors.New("value is not set")
 }
 
-// implement json.Marshaler interface
+// MarshalJSON implements the json.Marshaler interface.
+// Returns the raw JSON value if valid, or null if the value is nil.
 func (ns NullableAny) MarshalJSON() ([]byte, error) {
 	if ns.valid {
 		return ns.value, nil
@@ -92,6 +110,9 @@ func (ns NullableAny) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
+// Accepts JSON data and sets the NullableAny value, validating the JSON format.
+// Returns an error if the JSON is invalid.
 func (ns *NullableAny) UnmarshalJSON(data []byte) error {
 	if len(data) == 0 || bytes.Equal(data, []byte("null")) {
 		ns.value = nil
@@ -108,6 +129,9 @@ func (ns *NullableAny) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// NullableAnyFrom creates a new NullableAny from any value.
+// Returns an error if the value cannot be marshaled to JSON.
+// This is a convenience function for creating NullableAny instances.
 func NullableAnyFrom(value any) (NullableAny, error) {
 	var na NullableAny
 	err := na.Set(value)
@@ -117,6 +141,9 @@ func NullableAnyFrom(value any) (NullableAny, error) {
 	return na, nil
 }
 
+// NullableAnySetRaw creates a NullableAny directly from raw JSON data.
+// This bypasses the marshaling step and is useful when you already have valid JSON.
+// The caller is responsible for ensuring the JSON is valid.
 func NullableAnySetRaw(value json.RawMessage) NullableAny {
 	return NullableAny{
 		value: value,
@@ -124,6 +151,8 @@ func NullableAnySetRaw(value json.RawMessage) NullableAny {
 	}
 }
 
+// NilAny creates a new NullableAny that represents a null value.
+// This is equivalent to a nil NullableAny but provides a clear constructor.
 func NilAny() NullableAny {
 	// Return a NullableAny that is nil
 	return NullableAny{
