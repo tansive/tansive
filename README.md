@@ -137,6 +137,6 @@ Tansive is Open Source under the [Apache 2.0 License](LICENSE)
 ## 🙏 Contributing
 
 Contributions, issues, and feature requests are welcome.
-Please see CONTRIBUTING.md for guidelines.
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 Built with care by a solo founder passionate about infrastructure, AI, and developer experience.
