@@ -94,12 +94,13 @@ tansive tree
    Change `model` to "gpt4o" or "claude" depending on the API Key
 
 ```bash
-# Run the Skill in 'dev' environment
+# Run in 'dev' environment (agent will redeploy a pod)
 tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
 --view dev-view \
 --input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"claude"}'
 
-# Run the Skill in 'prod' environment. Tansive policy will block redeployment in prod
+
+# Run in 'prod' environment. (policy will block redeployment)
 tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
 --view prod-view \
 --input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"claude"}'
@@ -108,11 +109,18 @@ tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
 6.  **Run the Health Bot Skill (Protect sensitive PHI data via session pinning)**
 
 ```bash
-# Run the Health Bot with Session pinned to John's Patient Id
-tansive session create /demo-skillsets/health-record-demo/health-record-agent --view dev-view --input-args '{"prompt":"John was looking sick. Can you please check his bloodwork?","model":"gpt4o"}'  --session-vars '{"patient_id":"H12345"}'
+# Run the Health Bot with Session pinned to John's patient_id
+tansive session create /demo-skillsets/health-record-demo/health-record-agent \
+--view dev-view \
+--input-args '{"prompt":"John was looking sick. Can you please check his bloodwork?","model":"gpt4o"}' \
+--session-vars '{"patient_id":"H12345"}'
 
-# Ask to fetch Sheila's record. Tansive will reject the bot's request
-tansive session create /demo-skillsets/health-record-demo/health-record-agent --view dev-view --input-args '{"prompt":"Sheila was looking sick. Can you please check her bloodwork?","model":"gpt4o"}'  --session-vars '{"patient_id":"H12345"}'
+
+# Try to fetch Sheila's record (expected: Tansive will reject this request)
+tansive session create /demo-skillsets/health-record-demo/health-record-agent \
+--view dev-view \
+--input-args '{"prompt":"Sheila was looking sick. Can you please check her bloodwork?","model":"gpt4o"}' \
+--session-vars '{"patient_id":"H12345"}'
 
 ```
 
