@@ -48,7 +48,7 @@ Wait for services to start.
 
 2. **Install the CLI**
 
-   Download the appropriate release binary named `tansive` from [Releases](https://github.com/tansive/tansive/releases) or build from source.
+   Download the appropriate release binary named `tansive-<version>-<os>-<arch>.tar.gz` from [Releases](https://github.com/tansive/tansive/releases) or build from source.
 
 ```bash
 # Verify CLI installation
@@ -79,17 +79,17 @@ KUBECONFIG="YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgogIC0gbmFtZTogbXkt
 EOF
 ```
 
-4. **Setup the Catalog**
+4. **Setup the Catalog via declarative scripts**
 
 ```bash
 # sets up a new catalog with dev and prod variants, and SkillSets
 bash examples/catalog_setup/setup.sh
 
-# view the catalog
+# view the catalog structure that was setup
 tansive tree
 ```
 
-5. **Run the Troubleshooter Skill**
+5. **Run the Ops Troubleshooter Skill (Control agent actions via scoped Policy)**
 
    Change `model` to "gpt4o" or "claude" depending on the API Key
 
@@ -105,11 +105,11 @@ tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
 --input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"claude"}'
 ```
 
-6.  **Run the Health Bot Skill**
+6.  **Run the Health Bot Skill (Protect sensitive PHI data via session pinning)**
 
 ```bash
 # Run the Health Bot with Session pinned to John's Patient Id
-tansive session create /demo-skillsets/health-record-demo/health-record-agent --view dev-view --input-args '{"prompt":"John was looking sick. Can you please check her bloodwork?","model":"gpt4o"}'  --session-vars '{"patient_id":"H12345"}'
+tansive session create /demo-skillsets/health-record-demo/health-record-agent --view dev-view --input-args '{"prompt":"John was looking sick. Can you please check his bloodwork?","model":"gpt4o"}'  --session-vars '{"patient_id":"H12345"}'
 
 # Ask to fetch Sheila's record. Tansive will reject the bot's request
 tansive session create /demo-skillsets/health-record-demo/health-record-agent --view dev-view --input-args '{"prompt":"Sheila was looking sick. Can you please check her bloodwork?","model":"gpt4o"}'  --session-vars '{"patient_id":"H12345"}'
@@ -118,17 +118,17 @@ tansive session create /demo-skillsets/health-record-demo/health-record-agent --
 
 ## 📄 Documentation
 
-Full documentation and examples are available at [https://docs.tansive.io](https://docs.tansive.io)
+Documentation and examples are available at [https://docs.tansive.io](https://docs.tansive.io)
 
 ## 💬 Community and Support
 
 Questions, Feedback, Ideas?
 
-Reach out:
+👉 [Start a discussion](https://github.com/tansive/tansive/discussions)
 
-- [Discord](https://discord.gg/DARNwnyUhw)
-- [X](https://x.com/gettansive)
-- [LinkedIn](https://linkedin.com/company/tansive)
+Follow us:
+
+[X](https://x.com/gettansive) | [LinkedIn](https://linkedin.com/company/tansive)
 
 ## 💼 License
 
