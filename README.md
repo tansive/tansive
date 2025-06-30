@@ -1,4 +1,4 @@
-# <img src="media/tansive-logo.svg" alt="Tansive Logo" height="40" style="vertical-align: middle; margin-top: 0px; margin-right: 5px;"> Tansive™
+# <img src="media/tansive-logo.svg" alt="Tansive Logo" height="40" style="vertical-align: middle; margin-top: 0px; margin-right: 5px;"> Tansive
 
 **Open platform for Policy-Driven, Auditable, Secure AI Agents**
 
@@ -6,7 +6,7 @@ Tansive is a developer- and ops-friendly platform for building, executing, and g
 
 Whether you are automating tasks that touch sensitive systems, creating AI agents that securely access multiple systems to gather precise context, or building new workflows on top of existing data, Tansive provides the foundation to deploy and run them safely while meeting compliance requirements.
 
-Tansive is not another agent framework. It's agnostic to frameworks and languages. Bring your own agents and tools—written in any language, using any interface, and Tansive will chain them together, enforce fine-grained policies, and manage their lifecycle.
+Tansive is not another agent framework. It's agnostic to frameworks and languages. Bring your own agents and tools written in any language, using any interface, and Tansive will chain them together, enforce fine-grained policies, and manage their lifecycle.
 
 ---
 
@@ -25,7 +25,7 @@ Tansive is not another agent framework. It's agnostic to frameworks and language
   Hash-linked, signed logs of every action for observability, compliance, and forensic analysis.
 
 - **Language and Framework Agnostic**  
-  Author tools and agents in any language—Python, Bash, Go, Node.js - no mandatory SDKs or special runtime servers.
+  Author tools and agents in any language — Python, Bash, Go, Node.js — no mandatory SDKs.
 
 - **GitOps Friendly**  
   Configure everything via declarative YAML specs version-controlled in Git, modeled on familiar cloud-native patterns.
@@ -140,3 +140,5 @@ Contributions, issues, and feature requests are welcome.
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 Built with care by a solo founder passionate about infrastructure, AI, and developer experience.
+
+More information at [tansive.com](https://tansive.com)
