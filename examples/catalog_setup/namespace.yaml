@@ -1,0 +1,5 @@
+apiVersion: "0.1.0-alpha.1"
+kind: Namespace
+metadata:
+  name: example-namespace
+  description: "An example namespace for testing purposes"

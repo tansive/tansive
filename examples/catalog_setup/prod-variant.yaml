@@ -1,0 +1,6 @@
+apiVersion: "0.1.0-alpha.1"
+kind: Variant
+metadata:
+  name: prod
+  catalog: example-catalog
+  description: "Variant for the production environment"

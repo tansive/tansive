@@ -1,0 +1,62 @@
+apiVersion: "0.1.0-alpha.1"
+kind: Variant
+metadata:
+  name: dev
+  catalog: demo-catalog
+  description: "Variant for the development environment"
+---
+apiVersion: "0.1.0-alpha.1"
+kind: Variant
+metadata:
+  name: prod
+  catalog: demo-catalog
+  description: "Variant for the production environment"
+---
+apiVersion: "0.1.0-alpha.1"
+kind: Namespace
+metadata:
+  name: my-app-ns
+  variant: dev
+  description: "An example namespace"
+---
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: dev-view
+  catalog: demo-catalog
+  variant: dev
+  description: View with full access to resources
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - kubernetes.pods.list
+        - kubernetes.deployments.restart
+        - kubernetes.troubleshoot
+      targets:
+        - res://skillsets/demo-skillsets/kubernetes-demo
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - patient.labresults.get
+        - patient.id.resolve
+      targets:
+        - res://skillsets/demo-skillsets/health-record-demo
+---
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: prod-view
+  catalog: demo-catalog
+  variant: prod
+  description: View with constrained access to resources
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - kubernetes.pods.list
+        - kubernetes.troubleshoot
+      targets:
+        - res://skillsets/demo-skillsets/kubernetes-demo 

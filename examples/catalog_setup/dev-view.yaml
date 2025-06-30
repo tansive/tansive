@@ -1,0 +1,18 @@
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: dev-view
+  catalog: test-catalog
+  variant: dev
+  description: View with full access to resources
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - kubernetes.pods.list
+        - kubernetes.deployments.restart
+        - kubernetes.troubleshoot
+      targets:
+        - res://skillsets/demo-skillsets/kubernetes-demo
+

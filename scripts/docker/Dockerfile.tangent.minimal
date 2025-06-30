@@ -1,0 +1,63 @@
+# Builder stage
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
+
+WORKDIR /app
+
+# Install git for go mod download
+RUN apk add --no-cache git
+
+COPY go.mod ./
+COPY . .
+
+RUN go mod tidy && go mod download
+
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o tangent ./cmd/tangent
+
+# Use Alpine Linux for smaller footprint
+FROM alpine:3.19
+
+# Install Python, Node.js, and essential packages
+RUN apk add --no-cache \
+    python3 py3-pip \
+    nodejs npm \
+    bash curl git jq ca-certificates \
+    && ln -sf python3 /usr/bin/python
+
+# Install only essential Python packages (using --break-system-packages for Alpine)
+RUN pip3 install --no-cache-dir --break-system-packages \
+    openai langchain \
+    fastapi uvicorn aiohttp tansive-skillset-sdk
+
+# Install only essential TypeScript tools
+RUN npm install -g typescript
+
+# Create necessary directories
+RUN mkdir -p /var/tangent/scripts /etc/tansive
+
+# Copy binary and config
+COPY --from=builder /app/tangent /usr/local/bin/tangent
+COPY scripts/docker/conf/tangent.docker.conf /etc/tansive/tangent.conf
+COPY examples/skillset_scripts/ /var/tangent/scripts/
+
+# Create non-root user
+RUN addgroup -g 1001 -S tangent && \
+    adduser -u 1001 -S tangent -G tangent && \
+    chown -R tangent:tangent /var/tangent /etc/tansive
+
+# Keep the user root to avoid issues with folder creation. Need to fix this.
+USER root
+
+EXPOSE 8468
+
+ENV WORKING_DIR=/var/tangent
+ENV SCRIPT_DIR=/var/tangent/scripts
+
+VOLUME ["/var/tangent", "/var/tangent/scripts"]
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider https://localhost:8468/health || exit 1
+
+CMD ["/usr/local/bin/tangent", "-config", "/etc/tansive/tangent.conf"] 

@@ -1,0 +1,17 @@
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: prod-view
+  catalog: test-catalog
+  variant: prod
+  description: View with constrained access to resources
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - kubernetes.pods.list
+        - kubernetes.troubleshoot
+      targets:
+        - res://skillsets/demo-skillsets/kubernetes-demo
+

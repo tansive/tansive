@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: tansive-postgres
+    environment:
+      POSTGRES_USER: tansive
+      POSTGRES_PASSWORD: abc@123
+      POSTGRES_DB: hatchcatalog
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../sql/00-create-user.sql:/docker-entrypoint-initdb.d/01-create-user.sql
+      - ../sql/hatchcatalog.sql:/docker-entrypoint-initdb.d/02-hatchcatalog.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tansive -d hatchcatalog"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tansive-server:
+    image: ghcr.io/tansive/tansive/tansivesrv:latest
+    container_name: tansive-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./conf/tansivesrv.docker.conf:/etc/tansive/tansivesrv.conf
+      - tansive_server_logs:/var/log/tansive
+    ports:
+      - "8678:8678"
+    restart: unless-stopped
+    command: ["/app/tansivesrv", "--config", "/etc/tansive/tansivesrv.conf"]
+    healthcheck:
+      test:
+        ["CMD", "wget", "--spider", "--no-check-certificate", "-q", "https://localhost:8678/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tangent:
+    image: ghcr.io/tansive/tansive/tangent-minimal:latest
+    container_name: tangent-server
+    depends_on:
+      tansive-server:
+        condition: service_healthy
+    volumes:
+      - ./conf/tangent.docker.conf:/etc/tansive/tangent.conf
+      - tangent_working_dir:/var/tangent
+      - ../../examples/skillset_scripts:/var/tangent/scripts
+      - tangent_logs:/var/log/tangent
+    ports:
+      - "8468:8468"
+    restart: unless-stopped
+    command: ["tangent", "--config", "/etc/tansive/tangent.conf"]
+
+volumes:
+  postgres_data:
+    driver: local
+  tansive_server_logs:
+    driver: local
+  tangent_working_dir:
+    driver: local
+  tangent_logs:
+    driver: local

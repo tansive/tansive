@@ -1,0 +1,5 @@
+apiVersion: "0.1.0-alpha.1"
+kind: Catalog
+metadata:
+  name: demo-catalog
+  description: "This is the catalog for a demo of Tansive"

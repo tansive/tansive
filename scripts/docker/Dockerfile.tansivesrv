@@ -1,0 +1,51 @@
+# Multi-stage build for tansivesrv
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder
+
+ARG TARGETOS
+
+ARG TARGETARCH
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /app
+
+COPY go.mod ./
+
+RUN go mod download
+
+COPY . .
+
+RUN go mod tidy
+
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o tansivesrv ./cmd/tansivesrv
+
+FROM alpine:3.19
+
+RUN apk update && apk upgrade && \
+    apk add --no-cache ca-certificates tzdata && \
+    rm -rf /var/cache/apk/*
+
+RUN addgroup -g 1001 -S tansive && \
+    adduser -u 1001 -S tansive -G tansive
+
+RUN mkdir -p /etc/tansive /var/log/tansive && \
+    chown -R tansive:tansive /etc/tansive /var/log/tansive
+
+COPY --from=builder /app/tansivesrv /usr/local/bin/tansivesrv
+
+COPY ../../tansivesrv.conf /etc/tansive/tansivesrv.conf
+
+RUN chown tansive:tansive /usr/local/bin/tansivesrv && \
+    chmod +x /usr/local/bin/tansivesrv
+
+USER tansive
+
+EXPOSE 8678
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider https://localhost:8678/health || exit 1
+
+ENTRYPOINT ["/usr/local/bin/tansivesrv"]
+
+CMD ["--config", "/etc/tansive/tansivesrv.conf"] 
