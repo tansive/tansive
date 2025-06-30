@@ -1,4 +1,4 @@
-# <img src="media/tansive-logo.svg" alt="Tansive Logo" height="40" style="vertical-align: middle; margin-top: -6px; margin-right: 5px;"> Tansive
+# <img src="media/tansive-logo.svg" alt="Tansive Logo" height="40" style="vertical-align: middle; margin-top: 0px; margin-right: 5px;"> Tansive™
 
 **Open platform for Policy-Driven, Auditable, Secure AI Agents**
 
