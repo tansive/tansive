@@ -79,12 +79,12 @@ func (r *runner) Run(ctx context.Context, args *api.SkillInputArgs) apperrors.Er
 	}
 
 	if r.config.Security.Type == SecurityTypeDefault {
-		return r.runWithDevModeSecurity(ctx, args)
+		return r.runWithDefaultSecurity(ctx, args)
 	}
 	return ErrInvalidSecurity.Msg("security type not supported: " + string(r.config.Security.Type))
 }
 
-func (r *runner) runWithDevModeSecurity(ctx context.Context, args *api.SkillInputArgs) apperrors.Error {
+func (r *runner) runWithDefaultSecurity(ctx context.Context, args *api.SkillInputArgs) apperrors.Error {
 	scriptPath := filepath.Join(runnerConfig.ScriptDir, filepath.Clean(r.config.Script))
 	if !strings.HasPrefix(scriptPath, filepath.Clean(runnerConfig.ScriptDir)+string(os.PathSeparator)) {
 		return ErrInvalidScript.Msg("script path escapes trusted directory")
