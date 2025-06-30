@@ -38,6 +38,8 @@ Read detailed Intallation and Getting Started walkthrough at [docs.tansive.io](h
 
 > **Note:** Tansive is currently in **0.1-alpha** and rapidly evolving. Expect rough edges — feedback is welcome!
 
+### Install Tansive
+
 1. **Run the Tansive Server and Tangent**
 
 ```bash
@@ -95,7 +97,7 @@ tansive tree
 
 ### Run the Example Agents
 
-**Run the Ops Troubleshooter (Control agent actions via scoped Policy)**
+**Run the Ops Troubleshooter Agent (Control agent actions via scoped Policy)**
 
 Change `model` to "gpt4o" or "claude" depending on the API Key
 
@@ -112,7 +114,7 @@ tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
 --input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"claude"}'
 ```
 
-**Run the Health Bot (Protect sensitive PHI data via session pinning)**
+**Run the Health Bot Agent (Protect sensitive PHI data via session pinning)**
 
 ```bash
 # Run the Health Bot with Session pinned to John's patient_id
