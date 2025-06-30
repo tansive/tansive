@@ -64,9 +64,13 @@ tansive login
 tansive status
 ```
 
-3. **Configure API Keys**
+### Setup a Catalog
 
-   Create a `.env` file in the project root with your OpenAI or Anthropic API Key. Replace only the API keys you want to use - keep the placeholder for keys you don't need (e.g., if you only use Claude, keep `<your-openai-key-here>` as-is).
+1. **Configure API Keys**
+
+Configure API Keys to run the sample agents.
+
+> Create a `.env` file in the project root with your OpenAI or Anthropic API Key. Replace only the API keys you want to use - keep the placeholder for keys you don't need (e.g., if you only use Claude, keep `<your-openai-key-here>` as-is).
 
 ```bash
 # Create the .env file
@@ -79,7 +83,7 @@ KUBECONFIG="YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgogIC0gbmFtZTogbXkt
 EOF
 ```
 
-4. **Setup the Catalog via declarative scripts**
+2. **Setup the example Catalog via declarative scripts**
 
 ```bash
 # sets up a new catalog with dev and prod variants, and SkillSets
@@ -89,9 +93,11 @@ bash examples/catalog_setup/setup.sh
 tansive tree
 ```
 
-5. **Run the Ops Troubleshooter Skill (Control agent actions via scoped Policy)**
+### Run the Example Agents
 
-   Change `model` to "gpt4o" or "claude" depending on the API Key
+**Run the Ops Troubleshooter (Control agent actions via scoped Policy)**
+
+Change `model` to "gpt4o" or "claude" depending on the API Key
 
 ```bash
 # Run in 'dev' environment (agent will redeploy a pod)
@@ -106,7 +112,7 @@ tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
 --input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"claude"}'
 ```
 
-6.  **Run the Health Bot Skill (Protect sensitive PHI data via session pinning)**
+**Run the Health Bot (Protect sensitive PHI data via session pinning)**
 
 ```bash
 # Run the Health Bot with Session pinned to John's patient_id
