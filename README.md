@@ -50,7 +50,7 @@ Wait for services to start.
 
 2. **Install the CLI**
 
-   Download the appropriate release binary named `tansive-<version>-<os>-<arch>.tar.gz` from [Releases](https://github.com/tansive/tansive/releases) or build from source.
+Download the appropriate release binary named `tansive-<version>-<os>-<arch>.tar.gz` from [Releases](https://github.com/tansive/tansive/releases) or build from source.
 
 ```bash
 # Verify CLI installation
