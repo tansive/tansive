@@ -36,6 +36,37 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 		Children  []*SkillNode
 	}
 
+	// getEntryTime extracts the timestamp from a log entry
+	getEntryTime := func(entry HashedLogEntry) time.Time {
+		if rawTime, ok := entry.Payload["time"]; ok {
+			switch v := rawTime.(type) {
+			case float64:
+				return time.UnixMilli(int64(v))
+			case int64:
+				return time.UnixMilli(v)
+			case string:
+				if parsed, err := time.Parse(time.RFC3339, v); err == nil {
+					return parsed
+				}
+			}
+		}
+		return time.Time{}
+	}
+
+	// getNodeEarliestTime returns the earliest timestamp from all entries in a node
+	getNodeEarliestTime := func(node *SkillNode) time.Time {
+		if len(node.Entries) == 0 {
+			return time.Time{}
+		}
+		earliest := getEntryTime(node.Entries[0])
+		for _, entry := range node.Entries {
+			if entryTime := getEntryTime(entry); !entryTime.IsZero() && (earliest.IsZero() || entryTime.Before(earliest)) {
+				earliest = entryTime
+			}
+		}
+		return earliest
+	}
+
 	f, err := os.Open(absPath)
 	if err != nil {
 		return fmt.Errorf("failed to open log file: %w", err)
@@ -67,7 +98,7 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 		invID := str(p["invocation_id"])
 		invokerID := str(p["invoker_id"])
 		if invID == "" {
-			invID = "__general__"
+			invID = "__session__"
 		}
 		invocationMap[invID] = append(invocationMap[invID], entry)
 		if _, ok := invokerMap[invID]; !ok {
@@ -84,11 +115,28 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 		}
 	}
 
+	// --- Deterministic node building ---
 	nodes := make(map[string]*SkillNode)
-	var roots []*SkillNode
 	var generalRoot *SkillNode
 
+	// First pass: create all nodes
 	for id, entries := range invocationMap {
+		// Sort entries by time ascending
+		sort.SliceStable(entries, func(i, j int) bool {
+			timeI := getEntryTime(entries[i])
+			timeJ := getEntryTime(entries[j])
+			if timeI.IsZero() && timeJ.IsZero() {
+				return false
+			}
+			if timeI.IsZero() {
+				return false
+			}
+			if timeJ.IsZero() {
+				return true
+			}
+			return timeI.Before(timeJ)
+		})
+
 		node := &SkillNode{
 			ID:        id,
 			InvokerID: invokerMap[id],
@@ -97,29 +145,37 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 		nodes[id] = node
 	}
 
+	// Second pass: attach children
+	var unattached []*SkillNode
 	for _, node := range nodes {
-		if node.ID == "__general__" {
+		if node.ID == "__session__" {
 			generalRoot = node
 			continue
 		}
-		if parent, ok := nodes[node.InvokerID]; ok {
-			parent.Children = append(parent.Children, node)
-		} else {
+		if node.InvokerID == "" {
 			if generalRoot != nil {
 				generalRoot.Children = append(generalRoot.Children, node)
+			} else {
+				unattached = append(unattached, node)
 			}
-		}
-	}
-	if generalRoot != nil {
-		roots = []*SkillNode{generalRoot}
-	} else {
-		for _, node := range nodes {
-			if node.InvokerID == "" {
-				roots = append(roots, node)
+		} else {
+			if parent, ok := nodes[node.InvokerID]; ok {
+				parent.Children = append(parent.Children, node)
+			} else {
+				unattached = append(unattached, node)
 			}
 		}
 	}
 
+	// Third pass: build roots
+	var roots []*SkillNode
+	if generalRoot != nil {
+		roots = append([]*SkillNode{generalRoot}, unattached...)
+	} else {
+		roots = unattached
+	}
+
+	// --- HTML output ---
 	htmlPath := strings.TrimSuffix(absPath, filepath.Ext(absPath)) + ".html"
 	if filepath.Dir(htmlPath) != filepath.Dir(absPath) {
 		return fmt.Errorf("invalid output path: must be in same directory as input")
@@ -150,6 +206,22 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 
 	var renderNode func(node *SkillNode, depth int)
 	renderNode = func(node *SkillNode, depth int) {
+		// Sort children by earliest time
+		sort.SliceStable(node.Children, func(i, j int) bool {
+			timeI := getNodeEarliestTime(node.Children[i])
+			timeJ := getNodeEarliestTime(node.Children[j])
+			if timeI.IsZero() && timeJ.IsZero() {
+				return false
+			}
+			if timeI.IsZero() {
+				return false
+			}
+			if timeJ.IsZero() {
+				return true
+			}
+			return timeI.Before(timeJ)
+		})
+
 		skillName := "Skill Invocation"
 		for _, e := range node.Entries {
 			if name := str(e.Payload["skill"]); name != "" {
@@ -170,11 +242,12 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 		}
 	}
 
+	// Sort roots deterministically
 	sort.SliceStable(roots, func(i, j int) bool {
-		if roots[i].ID == "__general__" {
+		if roots[i].ID == "__session__" {
 			return true
 		}
-		if roots[j].ID == "__general__" {
+		if roots[j].ID == "__session__" {
 			return false
 		}
 		return roots[i].ID < roots[j].ID
@@ -185,6 +258,11 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 	}
 
 	fmt.Fprint(out, `</body></html>`)
+
+	if err := out.Sync(); err != nil {
+		return fmt.Errorf("failed to sync file to disk: %w", err)
+	}
+
 	return nil
 }
 
