@@ -1,6 +1,8 @@
 # <img src="media/tansive-logo.svg" alt="Tansive Logo" height="40" style="vertical-align: middle; margin-top: 0px; margin-right: 5px;"> Tansive
 
-**Open platform for Policy-Driven, Auditable, Secure AI Agents**
+[![Go Report Card](https://goreportcard.com/badge/github.com/tansive/tansive)](https://goreportcard.com/report/github.com/tansive/tansive)
+
+### Open platform for Policy-Driven, Auditable, Secure AI Agents
 
 Tansive is a developer- and ops-friendly platform for building, executing, and governing AI agents and tools using declarative workflows and fine-grained policies. It’s not just another agent framework — Tansive is agnostic to both agent frameworks and programming languages.
 
