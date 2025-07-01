@@ -46,7 +46,7 @@ Read detailed Intallation and Getting Started walkthrough at [docs.tansive.io](h
 docker compose -f scripts/docker/docker-compose-aio.yaml up -d
 ```
 
-Wait for services to start.
+Wait for services to start. Use `--pull always` option if you have already run Tansive and need to get the latest images.
 
 2. **Install the CLI**
 
