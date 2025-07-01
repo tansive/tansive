@@ -194,17 +194,48 @@ func ParseDuration(input string) (time.Duration, error) {
 
 // ValidateConfig checks if all required configuration values are present and valid
 func ValidateConfig(cfg *ConfigParam) error {
-	// Check if the config file format version is supported
+	if err := validateConfigFormatVersion(cfg); err != nil {
+		return err
+	}
+	if err := validateServerConfig(cfg); err != nil {
+		return err
+	}
+	if err := validateSessionConfig(cfg); err != nil {
+		return err
+	}
+	if err := validateAuthConfig(cfg); err != nil {
+		return err
+	}
+	if err := validateSingleUserConfig(cfg); err != nil {
+		return err
+	}
+	if err := validateDBConfig(cfg); err != nil {
+		return err
+	}
+	if err := validateAuditLogConfig(cfg); err != nil {
+		return err
+	}
+	if err := validateTLSConfig(cfg); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateConfigFormatVersion(cfg *ConfigParam) error {
 	if cfg.FormatVersion != Version {
 		return fmt.Errorf("unsupported config file format version: %s", cfg.FormatVersion)
 	}
+	return nil
+}
 
-	// Server validation
+func validateServerConfig(cfg *ConfigParam) error {
 	if cfg.ServerPort == "" {
 		return fmt.Errorf("server_port is required")
 	}
+	return nil
+}
 
-	// Session validation
+func validateSessionConfig(cfg *ConfigParam) error {
 	if cfg.Session.ExpirationTime == "" {
 		return fmt.Errorf("session.expiration_time is required")
 	}
@@ -214,8 +245,10 @@ func ValidateConfig(cfg *ConfigParam) error {
 	if cfg.Session.MaxVariables <= 0 {
 		return fmt.Errorf("session.max_variables must be positive")
 	}
+	return nil
+}
 
-	// Auth validation
+func validateAuthConfig(cfg *ConfigParam) error {
 	if cfg.Auth.MaxTokenAge == "" {
 		return fmt.Errorf("auth.max_token_age is required")
 	}
@@ -234,8 +267,11 @@ func ValidateConfig(cfg *ConfigParam) error {
 	if _, err := ParseDuration(cfg.Auth.DefaultTokenValidity); err != nil {
 		return fmt.Errorf("invalid auth.default_token_validity: %v", err)
 	}
+	cfg.Auth.TestUserToken = "test-user-token"
+	return nil
+}
 
-	// Single user mode validation
+func validateSingleUserConfig(cfg *ConfigParam) error {
 	if cfg.SingleUserMode {
 		if cfg.DefaultTenantID == "" {
 			return fmt.Errorf("default_tenant_id is required in single user mode")
@@ -244,10 +280,10 @@ func ValidateConfig(cfg *ConfigParam) error {
 			return fmt.Errorf("default_project_id is required in single user mode")
 		}
 	}
+	return nil
+}
 
-	cfg.Auth.TestUserToken = "test-user-token"
-
-	// Database validation
+func validateDBConfig(cfg *ConfigParam) error {
 	if cfg.DB.Host == "" {
 		return fmt.Errorf("db.host is required")
 	}
@@ -266,10 +302,11 @@ func ValidateConfig(cfg *ConfigParam) error {
 	if cfg.DB.SSLMode == "" {
 		return fmt.Errorf("db.sslmode is required")
 	}
+	return nil
+}
 
-	// Audit log validation
+func validateAuditLogConfig(cfg *ConfigParam) error {
 	if cfg.AuditLog.Path == "" {
-		// get the user config directory
 		userHomeDir, err := os.UserHomeDir()
 		if err != nil {
 			return fmt.Errorf("error getting user config directory: %v", err)
@@ -279,8 +316,10 @@ func ValidateConfig(cfg *ConfigParam) error {
 			return fmt.Errorf("error creating audit log directory: %v", err)
 		}
 	}
+	return nil
+}
 
-	// TLS validation
+func validateTLSConfig(cfg *ConfigParam) error {
 	if cfg.SupportTLS {
 		var err error
 		var certPEM []byte
@@ -303,7 +342,6 @@ func ValidateConfig(cfg *ConfigParam) error {
 		cfg.TLSCertPEM = certPEM
 		cfg.TLSKeyPEM = keyPEM
 	}
-
 	return nil
 }
 

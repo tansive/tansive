@@ -134,14 +134,51 @@ func ResolveAccessToken(ctx context.Context, token *jwt.Token) (*Token, apperror
 // Validate checks if the token is valid and not expired
 func (t *Token) Validate(ctx context.Context) apperrors.Error {
 	// Check all required claims are present
+	if err := t.validateRequiredClaims(ctx); err != nil {
+		return err
+	}
+
+	// Check version
+	if err := t.validateVersion(ctx); err != nil {
+		return err
+	}
+
+	// Check timing claims
+	if err := t.validateTimingClaims(ctx); err != nil {
+		return err
+	}
+
+	// Check issuer
+	if err := t.validateIssuer(ctx); err != nil {
+		return err
+	}
+
+	// Check audience
+	if err := t.validateAudience(ctx); err != nil {
+		return err
+	}
+
+	// Check JWT ID
+	if err := t.validateJWTID(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateRequiredClaims checks that all required claims are present
+func (t *Token) validateRequiredClaims(ctx context.Context) apperrors.Error {
 	for _, claim := range RequiredClaims {
 		if _, ok := t.claims[claim]; !ok {
 			log.Ctx(ctx).Debug().Str("claim", claim).Msg("missing required claim")
 			return ErrInvalidToken.Msg(fmt.Sprintf("missing required claim: %s", claim))
 		}
 	}
+	return nil
+}
 
-	// Check version
+// validateVersion checks the token version
+func (t *Token) validateVersion(ctx context.Context) apperrors.Error {
 	ver, ok := t.claims["ver"].(string)
 	if !ok {
 		log.Ctx(ctx).Debug().Msg("token missing or invalid ver claim")
@@ -151,10 +188,33 @@ func (t *Token) Validate(ctx context.Context) apperrors.Error {
 		log.Ctx(ctx).Debug().Str("got", ver).Str("expected", string(catcommon.TokenVersionV0_1)).Msg("invalid token version")
 		return ErrInvalidToken.Msg(fmt.Sprintf("invalid token version: got %s, expected %s", ver, catcommon.TokenVersionV0_1))
 	}
+	return nil
+}
 
+// validateTimingClaims checks expiration, not-before, and issued-at claims
+func (t *Token) validateTimingClaims(ctx context.Context) apperrors.Error {
 	now := time.Now()
 
 	// Check expiration with skew
+	if err := t.validateExpiration(ctx, now); err != nil {
+		return err
+	}
+
+	// Check not before with skew
+	if err := t.validateNotBefore(ctx, now); err != nil {
+		return err
+	}
+
+	// Check if token is too old
+	if err := t.validateIssuedAt(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateExpiration checks the exp claim
+func (t *Token) validateExpiration(ctx context.Context, now time.Time) apperrors.Error {
 	exp, ok := t.claims["exp"].(float64)
 	if !ok {
 		log.Ctx(ctx).Debug().Msg("token missing or invalid exp claim")
@@ -164,8 +224,11 @@ func (t *Token) Validate(ctx context.Context) apperrors.Error {
 		log.Ctx(ctx).Debug().Msg("token expired")
 		return ErrInvalidToken.Msg("token expired")
 	}
+	return nil
+}
 
-	// Check not before with skew
+// validateNotBefore checks the nbf claim
+func (t *Token) validateNotBefore(ctx context.Context, now time.Time) apperrors.Error {
 	if nbf, ok := t.claims["nbf"]; ok {
 		nbfFloat, ok := nbf.(float64)
 		if !ok {
@@ -177,8 +240,11 @@ func (t *Token) Validate(ctx context.Context) apperrors.Error {
 			return ErrInvalidToken.Msg("token not yet valid")
 		}
 	}
+	return nil
+}
 
-	// Check if token is too old
+// validateIssuedAt checks the iat claim
+func (t *Token) validateIssuedAt(ctx context.Context) apperrors.Error {
 	iat, ok := t.claims["iat"].(float64)
 	if !ok {
 		log.Ctx(ctx).Debug().Msg("token missing or invalid iat claim")
@@ -189,8 +255,11 @@ func (t *Token) Validate(ctx context.Context) apperrors.Error {
 		log.Ctx(ctx).Debug().Msg("token too old")
 		return ErrInvalidToken.Msg("token too old")
 	}
+	return nil
+}
 
-	// Check issuer
+// validateIssuer checks the iss claim
+func (t *Token) validateIssuer(ctx context.Context) apperrors.Error {
 	iss, ok := t.claims["iss"].(string)
 	if !ok {
 		log.Ctx(ctx).Debug().Msg("token missing or invalid iss claim")
@@ -201,8 +270,11 @@ func (t *Token) Validate(ctx context.Context) apperrors.Error {
 		log.Ctx(ctx).Debug().Str("got", iss).Str("expected", expectedIssuer).Msg("invalid issuer")
 		return ErrInvalidToken.Msg(fmt.Sprintf("invalid issuer: got %s, expected %s", iss, expectedIssuer))
 	}
+	return nil
+}
 
-	// Check audience
+// validateAudience checks the aud claim
+func (t *Token) validateAudience(ctx context.Context) apperrors.Error {
 	aud, ok := t.claims["aud"]
 	if !ok {
 		log.Ctx(ctx).Debug().Msg("token missing aud claim")
@@ -217,14 +289,7 @@ func (t *Token) Validate(ctx context.Context) apperrors.Error {
 			return ErrInvalidToken.Msg(fmt.Sprintf("invalid audience: got %s, expected %s", v, expectedAudience))
 		}
 	case []any:
-		found := false
-		for _, a := range v {
-			if s, ok := a.(string); ok && s == expectedAudience {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !t.containsExpectedAudience(v, expectedAudience) {
 			log.Ctx(ctx).Debug().Interface("got", v).Str("expected", expectedAudience).Msg("invalid audience")
 			return ErrInvalidToken.Msg(fmt.Sprintf("invalid audience: got %v, expected %s", v, expectedAudience))
 		}
@@ -232,8 +297,21 @@ func (t *Token) Validate(ctx context.Context) apperrors.Error {
 		log.Ctx(ctx).Debug().Type("type", v).Msg("invalid audience type")
 		return ErrInvalidToken.Msg("invalid audience type")
 	}
+	return nil
+}
 
-	// Check JWT ID
+// containsExpectedAudience checks if the expected audience is in the audience array
+func (t *Token) containsExpectedAudience(audiences []any, expected string) bool {
+	for _, a := range audiences {
+		if s, ok := a.(string); ok && s == expected {
+			return true
+		}
+	}
+	return false
+}
+
+// validateJWTID checks the jti claim
+func (t *Token) validateJWTID(ctx context.Context) apperrors.Error {
 	jti, ok := t.claims["jti"].(string)
 	if !ok {
 		log.Ctx(ctx).Debug().Msg("token missing or invalid jti claim")
@@ -243,7 +321,6 @@ func (t *Token) Validate(ctx context.Context) apperrors.Error {
 		log.Ctx(ctx).Debug().Str("jti", jti).Msg("token revoked")
 		return ErrInvalidToken.Msg("token revoked")
 	}
-
 	return nil
 }
 

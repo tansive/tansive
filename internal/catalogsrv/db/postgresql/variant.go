@@ -53,6 +53,8 @@ func (mm *metadataManager) createVariantWithTransaction(ctx context.Context, var
 	if tenantID == "" {
 		return dberror.ErrMissingTenantID
 	}
+
+	// Prepare variant IDs and directory IDs
 	variantID := variant.VariantID
 	if variant.VariantID == uuid.Nil {
 		variantID = uuid.New()
@@ -61,7 +63,31 @@ func (mm *metadataManager) createVariantWithTransaction(ctx context.Context, var
 	ssDirID := uuid.New()
 	variant.ResourceDirectoryID = rgDirID
 	variant.SkillsetDirectoryID = ssDirID
-	// Query to insert the variant
+
+	// Insert variant
+	if err := mm.insertVariantInTx(ctx, tx, variant, variantID, rgDirID, ssDirID, tenantID); err != nil {
+		return err
+	}
+
+	// Create default namespace
+	if err := mm.createDefaultNamespaceInTx(ctx, tx, variant, tenantID); err != nil {
+		return err
+	}
+
+	// Create resource directory
+	if err := mm.createResourceDirectoryInTx(ctx, tx, variant, rgDirID, tenantID); err != nil {
+		return err
+	}
+
+	// Create skillset directory
+	if err := mm.createSkillsetDirectoryInTx(ctx, tx, variant, ssDirID, tenantID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (mm *metadataManager) insertVariantInTx(ctx context.Context, tx *sql.Tx, variant *models.Variant, variantID, rgDirID, ssDirID uuid.UUID, tenantID catcommon.TenantId) apperrors.Error {
 	queryVariant := `
 		INSERT INTO variants (variant_id, name, description, info, catalog_id, resource_directory, skillset_directory, tenant_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -69,7 +95,6 @@ func (mm *metadataManager) createVariantWithTransaction(ctx context.Context, var
 		RETURNING variant_id, name;
 	`
 
-	// Execute variant insertion within the transaction
 	row := tx.QueryRowContext(ctx, queryVariant, variantID, variant.Name, variant.Description, variant.Info, variant.CatalogID, rgDirID, ssDirID, tenantID)
 	var insertedVariantID uuid.UUID
 	var insertedName string
@@ -79,42 +104,49 @@ func (mm *metadataManager) createVariantWithTransaction(ctx context.Context, var
 			log.Ctx(ctx).Info().Str("name", variant.Name).Str("variant_id", variant.VariantID.String()).Msg("variant already exists")
 			return dberror.ErrAlreadyExists.Msg("variant already exists")
 		}
-		if pgErr, ok := err.(*pgconn.PgError); ok {
-			if pgErr.Code == "23514" && pgErr.ConstraintName == "variants_name_check" {
-				log.Ctx(ctx).Error().Str("name", variant.Name).Msg("invalid variant name format")
-				return dberror.ErrInvalidInput.Msg("invalid variant name format")
-			}
-			if pgErr.ConstraintName == "variants_catalog_id_fkey" {
-				log.Ctx(ctx).Info().Str("catalog_id", variant.CatalogID.String()).Msg("catalog not found")
-				return dberror.ErrInvalidCatalog
-			}
-			if pgErr.Code == "23503" || pgErr.ConstraintName == "variants_catalog_id_tenant_id_fkey" { // Unique constraint violation
-				log.Ctx(ctx).Error().Str("name", variant.Name).Msg("catalog not found or invalid")
-				return dberror.ErrInvalidCatalog
-			}
-		}
-		log.Ctx(ctx).Error().Err(err).Str("name", variant.Name).Str("variant_id", variant.VariantID.String()).Msg("failed to insert variant")
-		return dberror.ErrDatabase.Err(err)
+		return mm.handleVariantInsertError(ctx, err, variant)
 	}
 
-	// Set the variant ID
 	variant.VariantID = insertedVariantID
+	return nil
+}
 
-	// Create a default namespace for the variant
+func (mm *metadataManager) handleVariantInsertError(ctx context.Context, err error, variant *models.Variant) apperrors.Error {
+	if pgErr, ok := err.(*pgconn.PgError); ok {
+		if pgErr.Code == "23514" && pgErr.ConstraintName == "variants_name_check" {
+			log.Ctx(ctx).Error().Str("name", variant.Name).Msg("invalid variant name format")
+			return dberror.ErrInvalidInput.Msg("invalid variant name format")
+		}
+		if pgErr.ConstraintName == "variants_catalog_id_fkey" {
+			log.Ctx(ctx).Info().Str("catalog_id", variant.CatalogID.String()).Msg("catalog not found")
+			return dberror.ErrInvalidCatalog
+		}
+		if pgErr.Code == "23503" || pgErr.ConstraintName == "variants_catalog_id_tenant_id_fkey" {
+			log.Ctx(ctx).Error().Str("name", variant.Name).Msg("catalog not found or invalid")
+			return dberror.ErrInvalidCatalog
+		}
+	}
+	log.Ctx(ctx).Error().Err(err).Str("name", variant.Name).Str("variant_id", variant.VariantID.String()).Msg("failed to insert variant")
+	return dberror.ErrDatabase.Err(err)
+}
+
+func (mm *metadataManager) createDefaultNamespaceInTx(ctx context.Context, tx *sql.Tx, variant *models.Variant, tenantID catcommon.TenantId) apperrors.Error {
 	namespace := models.Namespace{
 		Name:        catcommon.DefaultNamespace,
 		VariantID:   variant.VariantID,
 		TenantID:    tenantID,
 		Description: "Default namespace for the variant",
-		Info:        nil, // Default info as null
+		Info:        nil,
 	}
 	errDb := mm.createNamespaceWithTransaction(ctx, &namespace, tx)
 	if errDb != nil {
 		log.Ctx(ctx).Error().Err(errDb).Str("variant_id", variant.VariantID.String()).Msg("failed to create default namespace for variant")
 		return errDb
 	}
+	return nil
+}
 
-	// Create the resources directory for the variant
+func (mm *metadataManager) createResourceDirectoryInTx(ctx context.Context, tx *sql.Tx, variant *models.Variant, rgDirID uuid.UUID, tenantID catcommon.TenantId) apperrors.Error {
 	dir := models.SchemaDirectory{
 		DirectoryID: rgDirID,
 		VariantID:   variant.VariantID,
@@ -127,24 +159,10 @@ func (mm *metadataManager) createVariantWithTransaction(ctx context.Context, var
 		return dberror.ErrInvalidInput.Msg("invalid catalog object type: resource group not supported")
 	}
 
-	// Insert the schema directory into the database and get created uuid
-	query := ` INSERT INTO ` + tableName + ` (directory_id, variant_id, tenant_id, directory)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (tenant_id, directory_id) DO NOTHING RETURNING directory_id;`
+	return mm.insertDirectoryInTx(ctx, tx, dir, tableName, "resource groups directory")
+}
 
-	var directoryID uuid.UUID
-	err = tx.QueryRowContext(ctx, query, dir.DirectoryID, dir.VariantID, dir.TenantID, dir.Directory).Scan(&directoryID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			log.Ctx(ctx).Info().Str("directory_id", dir.DirectoryID.String()).Msg("resource groups directory already exists, skipping")
-			return nil
-		} else {
-			return dberror.ErrDatabase.Err(err)
-		}
-	}
-	dir.DirectoryID = directoryID
-
-	// Create the skillset directory for the variant
+func (mm *metadataManager) createSkillsetDirectoryInTx(ctx context.Context, tx *sql.Tx, variant *models.Variant, ssDirID uuid.UUID, tenantID catcommon.TenantId) apperrors.Error {
 	ssDir := models.SchemaDirectory{
 		DirectoryID: ssDirID,
 		VariantID:   variant.VariantID,
@@ -152,27 +170,30 @@ func (mm *metadataManager) createVariantWithTransaction(ctx context.Context, var
 		Directory:   []byte("{}"),
 	}
 
-	tableName = getSchemaDirectoryTableName(catcommon.CatalogObjectTypeSkillset)
+	tableName := getSchemaDirectoryTableName(catcommon.CatalogObjectTypeSkillset)
 	if tableName == "" {
 		return dberror.ErrInvalidInput.Msg("invalid catalog object type: skillset not supported")
 	}
 
-	// Insert the skillset directory into the database and get created uuid
-	query = ` INSERT INTO ` + tableName + ` (directory_id, variant_id, tenant_id, directory)
+	return mm.insertDirectoryInTx(ctx, tx, ssDir, tableName, "skillset directory")
+}
+
+func (mm *metadataManager) insertDirectoryInTx(ctx context.Context, tx *sql.Tx, dir models.SchemaDirectory, tableName, directoryType string) apperrors.Error {
+	query := ` INSERT INTO ` + tableName + ` (directory_id, variant_id, tenant_id, directory)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (tenant_id, directory_id) DO NOTHING RETURNING directory_id;`
 
-	err = tx.QueryRowContext(ctx, query, ssDir.DirectoryID, ssDir.VariantID, ssDir.TenantID, ssDir.Directory).Scan(&directoryID)
+	var directoryID uuid.UUID
+	err := tx.QueryRowContext(ctx, query, dir.DirectoryID, dir.VariantID, dir.TenantID, dir.Directory).Scan(&directoryID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Ctx(ctx).Info().Str("directory_id", ssDir.DirectoryID.String()).Msg("skillset directory already exists, skipping")
+			log.Ctx(ctx).Info().Str("directory_id", dir.DirectoryID.String()).Msgf("%s already exists, skipping", directoryType)
 			return nil
 		} else {
 			return dberror.ErrDatabase.Err(err)
 		}
 	}
-	ssDir.DirectoryID = directoryID
-
+	dir.DirectoryID = directoryID
 	return nil
 }
 

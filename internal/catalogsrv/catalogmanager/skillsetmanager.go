@@ -455,68 +455,116 @@ func DeleteSkillSet(ctx context.Context, m *interfaces.Metadata) apperrors.Error
 // - Value validation against the schema
 func (s *SkillSet) Validate() schemaerr.ValidationErrors {
 	var validationErrors schemaerr.ValidationErrors
+
+	// Validate kind
 	if s.Kind != catcommon.SkillSetKind {
 		validationErrors = append(validationErrors, schemaerr.ErrUnsupportedKind("kind"))
 	}
 
+	// Validate struct using schema validator
 	err := schemavalidator.V().Struct(s)
-	if err == nil {
-		// Validate each skill's input and output schemas and transform
-		for _, skill := range s.Spec.Skills {
-			isRunnerFound := false
-			// All skills must have a runner
-			for _, runner := range s.Spec.Sources {
-				if runner.Name == skill.Source {
-					isRunnerFound = true
-					break
-				}
-			}
-			if !isRunnerFound {
-				validationErrors = append(validationErrors, schemaerr.ErrValidationFailed(fmt.Sprintf("skill %s has no runner", skill.Name)))
-			}
-
-			// Validate input schema
-			if len(skill.InputSchema) > 0 {
-				_, err := compileSchema(string(skill.InputSchema))
-				if err != nil {
-					validationErrors = append(validationErrors, schemaerr.ErrValidationFailed(fmt.Sprintf("skill %s input schema: %v", skill.Name, err)))
-				}
-			}
-
-			// Validate output schema
-			if len(skill.OutputSchema) > 0 {
-				_, err := compileSchema(string(skill.OutputSchema))
-				if err != nil {
-					validationErrors = append(validationErrors, schemaerr.ErrValidationFailed(fmt.Sprintf("skill %s output schema: %v", skill.Name, err)))
-				}
-			}
-			// Validate transform
-			if !skill.Transform.IsNil() {
-				_, err := jsruntime.New(context.Background(), skill.Transform.String())
-				if err != nil {
-					validationErrors = append(validationErrors, schemaerr.ErrValidationFailed(fmt.Sprintf("skill %s transform: %v", skill.Name, err)))
-				}
-			}
-		}
-
-		// Validate each context's schema
-		for _, ctx := range s.Spec.Context {
-			if len(ctx.Schema) > 0 {
-				compiledSchema, err := compileSchema(string(ctx.Schema))
-				if err != nil {
-					validationErrors = append(validationErrors, schemaerr.ErrValidationFailed(fmt.Sprintf("context %s schema: %v", ctx.Name, err)))
-				}
-				if !ctx.Value.IsNil() {
-					err = compiledSchema.Validate(ctx.Value.Get())
-					if err != nil {
-						validationErrors = append(validationErrors, schemaerr.ErrValidationFailed(fmt.Sprintf("context %s value: %v", ctx.Name, err)))
-					}
-				}
-			}
-		}
-		return validationErrors
+	if err != nil {
+		return s.handleStructValidationErrors(err, validationErrors)
 	}
 
+	// Validate skills
+	validationErrors = append(validationErrors, s.validateSkills()...)
+
+	// Validate contexts
+	validationErrors = append(validationErrors, s.validateContexts()...)
+
+	return validationErrors
+}
+
+// validateSkills validates all skills in the skillset
+func (s *SkillSet) validateSkills() schemaerr.ValidationErrors {
+	var validationErrors schemaerr.ValidationErrors
+
+	for _, skill := range s.Spec.Skills {
+		// Validate skill has a runner
+		if !s.hasRunnerForSkill(skill) {
+			validationErrors = append(validationErrors,
+				schemaerr.ErrValidationFailed(fmt.Sprintf("skill %s has no runner", skill.Name)))
+		}
+
+		// Validate input schema
+		if len(skill.InputSchema) > 0 {
+			if err := s.validateSchema(skill.InputSchema); err != nil {
+				validationErrors = append(validationErrors,
+					schemaerr.ErrValidationFailed(fmt.Sprintf("skill %s input schema: %v", skill.Name, err)))
+			}
+		}
+
+		// Validate output schema
+		if len(skill.OutputSchema) > 0 {
+			if err := s.validateSchema(skill.OutputSchema); err != nil {
+				validationErrors = append(validationErrors,
+					schemaerr.ErrValidationFailed(fmt.Sprintf("skill %s output schema: %v", skill.Name, err)))
+			}
+		}
+
+		// Validate transform
+		if !skill.Transform.IsNil() {
+			if err := s.validateTransform(skill.Transform); err != nil {
+				validationErrors = append(validationErrors,
+					schemaerr.ErrValidationFailed(fmt.Sprintf("skill %s transform: %v", skill.Name, err)))
+			}
+		}
+	}
+
+	return validationErrors
+}
+
+// validateContexts validates all contexts in the skillset
+func (s *SkillSet) validateContexts() schemaerr.ValidationErrors {
+	var validationErrors schemaerr.ValidationErrors
+
+	for _, ctx := range s.Spec.Context {
+		if len(ctx.Schema) > 0 {
+			compiledSchema, err := compileSchema(string(ctx.Schema))
+			if err != nil {
+				validationErrors = append(validationErrors,
+					schemaerr.ErrValidationFailed(fmt.Sprintf("context %s schema: %v", ctx.Name, err)))
+				continue
+			}
+
+			// Validate context value against schema if present
+			if !ctx.Value.IsNil() {
+				if err := compiledSchema.Validate(ctx.Value.Get()); err != nil {
+					validationErrors = append(validationErrors,
+						schemaerr.ErrValidationFailed(fmt.Sprintf("context %s value: %v", ctx.Name, err)))
+				}
+			}
+		}
+	}
+
+	return validationErrors
+}
+
+// hasRunnerForSkill checks if a skill has a corresponding runner
+func (s *SkillSet) hasRunnerForSkill(skill Skill) bool {
+	for _, runner := range s.Spec.Sources {
+		if runner.Name == skill.Source {
+			return true
+		}
+	}
+	return false
+}
+
+// validateSchema validates a JSON schema
+func (s *SkillSet) validateSchema(schema json.RawMessage) error {
+	_, err := compileSchema(string(schema))
+	return err
+}
+
+// validateTransform validates a JavaScript transform
+func (s *SkillSet) validateTransform(transform types.NullableString) error {
+	_, err := jsruntime.New(context.Background(), transform.String())
+	return err
+}
+
+// handleStructValidationErrors processes validation errors from the struct validator
+func (s *SkillSet) handleStructValidationErrors(err error, validationErrors schemaerr.ValidationErrors) schemaerr.ValidationErrors {
 	validatorErrors, ok := err.(validator.ValidationErrors)
 	if !ok {
 		return append(validationErrors, schemaerr.ErrInvalidSchema)
@@ -527,24 +575,30 @@ func (s *SkillSet) Validate() schemaerr.ValidationErrors {
 
 	for _, e := range validatorErrors {
 		jsonFieldName := schemavalidator.GetJSONFieldPath(value, typeOfCS, e.StructField())
-		switch e.Tag() {
-		case "required":
-			validationErrors = append(validationErrors, schemaerr.ErrMissingRequiredAttribute(e.StructNamespace()))
-		case "oneof":
-			validationErrors = append(validationErrors, schemaerr.ErrInvalidFieldSchema(jsonFieldName, e.Value().(string)))
-		case "resourceNameValidator":
-			val, _ := e.Value().(string)
-			validationErrors = append(validationErrors, schemaerr.ErrInvalidNameFormat(jsonFieldName, val))
-		case "resourcePathValidator":
-			validationErrors = append(validationErrors, schemaerr.ErrInvalidObjectPath(jsonFieldName))
-		case "jsonSchemaValidator":
-			validationErrors = append(validationErrors, schemaerr.ErrInvalidFieldSchema(jsonFieldName))
-		default:
-			val := e.Value()
-			param := e.Param()
-			s := fmt.Sprintf("%v: %v", param, val)
-			validationErrors = append(validationErrors, schemaerr.ErrValidationFailed(s))
-		}
+		validationErrors = append(validationErrors, s.createValidationError(e, jsonFieldName))
 	}
+
 	return validationErrors
+}
+
+// createValidationError creates an appropriate validation error based on the validator tag
+func (s *SkillSet) createValidationError(e validator.FieldError, jsonFieldName string) schemaerr.ValidationError {
+	switch e.Tag() {
+	case "required":
+		return schemaerr.ErrMissingRequiredAttribute(e.StructNamespace())
+	case "oneof":
+		return schemaerr.ErrInvalidFieldSchema(jsonFieldName, e.Value().(string))
+	case "resourceNameValidator":
+		val, _ := e.Value().(string)
+		return schemaerr.ErrInvalidNameFormat(jsonFieldName, val)
+	case "resourcePathValidator":
+		return schemaerr.ErrInvalidObjectPath(jsonFieldName)
+	case "jsonSchemaValidator":
+		return schemaerr.ErrInvalidFieldSchema(jsonFieldName)
+	default:
+		val := e.Value()
+		param := e.Param()
+		s := fmt.Sprintf("%v: %v", param, val)
+		return schemaerr.ErrValidationFailed(s)
+	}
 }

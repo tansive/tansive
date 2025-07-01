@@ -100,15 +100,8 @@ func WithInteractive(interactive bool) RequestOptions {
 // Returns a SessionManager interface and any error that occurred during creation.
 func NewSession(ctx context.Context, rsrcSpec []byte, opts ...RequestOptions) (SessionManager, *tangent.Tangent, apperrors.Error) {
 	// Validate required IDs first
-	catalogID := catcommon.GetCatalogID(ctx)
-	variantID := catcommon.GetVariantID(ctx)
-	if catalogID == uuid.Nil {
-		return nil, nil, ErrInvalidObject.Msg("unable to determine catalog")
-	}
-
-	userID := catcommon.GetUserID(ctx)
-	if userID == "" {
-		return nil, nil, ErrInvalidObject.Msg("user ID is required")
+	if err := validateRequiredIDs(ctx); err != nil {
+		return nil, nil, err
 	}
 
 	requestOptions := &requestOptions{}
@@ -121,17 +114,91 @@ func NewSession(ctx context.Context, rsrcSpec []byte, opts ...RequestOptions) (S
 		return nil, nil, err
 	}
 
+	// Validate session specification
+	if err := validateSessionSpec(ctx, sessionSpec); err != nil {
+		return nil, nil, err
+	}
+
+	// Parse input arguments and session variables
+	inputArgs, sessionVariables, err := parseSessionData(sessionSpec)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Resolve view and skill set managers
+	viewManager, skillSetManager, skillObj, err := resolveManagersAndSkill(ctx, sessionSpec)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Validate skill input and permissions
+	if err := validateSkillAndPermissions(ctx, skillObj, viewManager, skillSetManager, inputArgs); err != nil {
+		return nil, nil, err
+	}
+
+	// Create session info
+	sessionInfo, err := createSessionInfo(sessionSpec, inputArgs, sessionVariables, viewManager, requestOptions)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get Tangent
+	tangent, err := tangent.GetTangentWithCapabilities(ctx, skillSetManager.GetRunnerTypes())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Create session object
+	session, err := createSessionObject(ctx, sessionSpec, sessionInfo, viewManager, tangent)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &sessionManager{
+		session:         session,
+		skillSetManager: skillSetManager,
+		viewManager:     viewManager,
+	}, tangent, nil
+}
+
+// validateRequiredIDs validates that required IDs are present in the context
+func validateRequiredIDs(ctx context.Context) apperrors.Error {
+	catalogID := catcommon.GetCatalogID(ctx)
+	if catalogID == uuid.Nil {
+		return ErrInvalidObject.Msg("unable to determine catalog")
+	}
+
+	userID := catcommon.GetUserID(ctx)
+	if userID == "" {
+		return ErrInvalidObject.Msg("user ID is required")
+	}
+
+	return nil
+}
+
+// validateSessionSpec validates the session specification
+func validateSessionSpec(ctx context.Context, sessionSpec SessionSpec) apperrors.Error {
 	// validate SkillSet Use policy
 	if err := validateSkillSetUsePolicy(ctx, sessionSpec.SkillPath); err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	skill := path.Base(sessionSpec.SkillPath)
 	skillSetPath := path.Dir(sessionSpec.SkillPath)
 	if skill == "" || skillSetPath == "" {
-		return nil, nil, ErrInvalidObject.Msg("invalid skill path")
+		return ErrInvalidObject.Msg("invalid skill path")
 	}
 
+	// Validate view policy
+	if err := validateViewPolicy(ctx, sessionSpec.ViewName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// parseSessionData parses input arguments and session variables from the session specification
+func parseSessionData(sessionSpec SessionSpec) (map[string]any, map[string]any, apperrors.Error) {
 	inputArgs := make(map[string]any)
 	if len(sessionSpec.InputArgs) > 0 {
 		if err := json.Unmarshal(sessionSpec.InputArgs, &inputArgs); err != nil {
@@ -146,43 +213,58 @@ func NewSession(ctx context.Context, rsrcSpec []byte, opts ...RequestOptions) (S
 		}
 	}
 
-	// Validate view policy
-	if err := validateViewPolicy(ctx, sessionSpec.ViewName); err != nil {
-		return nil, nil, err
-	}
+	return inputArgs, sessionVariables, nil
+}
 
+// resolveManagersAndSkill resolves view manager, skill set manager, and skill object
+func resolveManagersAndSkill(ctx context.Context, sessionSpec SessionSpec) (policy.ViewManager, catalogmanager.SkillSetManager, catalogmanager.Skill, apperrors.Error) {
 	viewManager, err := resolveViewByLabel(ctx, sessionSpec.ViewName)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, catalogmanager.Skill{}, err
 	}
 
-	viewDef := viewManager.GetViewDefinition()
-
+	skillSetPath := path.Dir(sessionSpec.SkillPath)
 	skillSetManager, err := resolveSkillSetManager(ctx, skillSetPath, viewManager.Scope())
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, catalogmanager.Skill{}, err
 	}
 
+	skill := path.Base(sessionSpec.SkillPath)
 	skillObj, err := skillSetManager.GetSkill(skill)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, catalogmanager.Skill{}, err
 	}
 
-	err = skillObj.ValidateInput(inputArgs)
+	return viewManager, skillSetManager, skillObj, nil
+}
+
+// validateSkillAndPermissions validates skill input and action permissions
+func validateSkillAndPermissions(ctx context.Context, skillObj catalogmanager.Skill, viewManager policy.ViewManager, skillSetManager catalogmanager.SkillSetManager, inputArgs map[string]any) apperrors.Error {
+	_ = ctx
+
+	// Validate skill input
+	err := skillObj.ValidateInput(inputArgs)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	// Validate action permissions
 	exportedActions := skillObj.GetExportedActions()
+	viewDef := viewManager.GetViewDefinition()
 	allowed, _, err := policy.AreActionsAllowedOnResource(viewDef, skillSetManager.GetResourcePath(), exportedActions)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 	if !allowed {
-		return nil, nil, ErrDisallowedByPolicy.Msg("use of skill is blocked by policy")
+		return ErrDisallowedByPolicy.Msg("use of skill is blocked by policy")
 	}
 
+	return nil
+}
+
+// createSessionInfo creates the session info object
+func createSessionInfo(_ SessionSpec, inputArgs map[string]any, sessionVariables map[string]any, viewManager policy.ViewManager, requestOptions *requestOptions) ([]byte, apperrors.Error) {
+	viewDef := viewManager.GetViewDefinition()
 	sessionInfo := SessionInfo{
 		SessionVariables: sessionVariables,
 		InputArgs:        inputArgs,
@@ -192,16 +274,20 @@ func NewSession(ctx context.Context, rsrcSpec []byte, opts ...RequestOptions) (S
 	}
 	sessionInfoJSON, goerr := json.Marshal(sessionInfo)
 	if goerr != nil {
-		return nil, nil, ErrInvalidObject.Msg("failed to marshal session info: " + goerr.Error())
+		return nil, ErrInvalidObject.Msg("failed to marshal session info: " + goerr.Error())
 	}
+	return sessionInfoJSON, nil
+}
 
-	// Get Tangent
-	tangent, err := tangent.GetTangentWithCapabilities(ctx, skillSetManager.GetRunnerTypes())
-	if err != nil {
-		return nil, nil, err
-	}
+// createSessionObject creates the session object
+func createSessionObject(ctx context.Context, sessionSpec SessionSpec, sessionInfo []byte, viewManager policy.ViewManager, tangent *tangent.Tangent) (*models.Session, apperrors.Error) {
+	catalogID := catcommon.GetCatalogID(ctx)
+	userID := catcommon.GetUserID(ctx)
+	variantID := catcommon.GetVariantID(ctx)
 
-	// Create session
+	skill := path.Base(sessionSpec.SkillPath)
+	skillSetPath := path.Dir(sessionSpec.SkillPath)
+
 	sessionID := uuid.New()
 	session := &models.Session{
 		SessionID:     sessionID,
@@ -211,7 +297,7 @@ func NewSession(ctx context.Context, rsrcSpec []byte, opts ...RequestOptions) (S
 		TangentID:     tangent.ID,
 		StatusSummary: string(SessionStatusCreated),
 		Status:        nil,
-		Info:          sessionInfoJSON,
+		Info:          sessionInfo,
 		UserID:        userID,
 		CatalogID:     catalogID,
 		VariantID:     variantID,
@@ -220,11 +306,7 @@ func NewSession(ctx context.Context, rsrcSpec []byte, opts ...RequestOptions) (S
 		ExpiresAt:     time.Now().Add(config.Config().Session.GetExpirationTimeOrDefault()),
 	}
 
-	return &sessionManager{
-		session:         session,
-		skillSetManager: skillSetManager,
-		viewManager:     viewManager,
-	}, tangent, nil
+	return session, nil
 }
 
 // Save persists the session to the database.

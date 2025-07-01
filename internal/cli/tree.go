@@ -51,13 +51,7 @@ func getTreeResource(cmd *cobra.Command, args []string) error {
 
 	queryParams := map[string]string{"tree": "true"}
 
-	var catalogName string
-	if getTreeCatalog != "" {
-		catalogName = getTreeCatalog
-	} else {
-		catalogName = GetConfig().CurrentCatalog
-	}
-
+	catalogName := getCatalogName()
 	if catalogName == "" {
 		return fmt.Errorf("set a catalog first with `tansive set-catalog <catalog-name>`")
 	}
@@ -67,92 +61,149 @@ func getTreeResource(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var variantObjects []catalogmanager.VariantObject
-	if err := json.Unmarshal(response, &variantObjects); err != nil {
-		return fmt.Errorf("failed to parse response: %v", err)
+	variantObjects, err := parseVariantObjects(response)
+	if err != nil {
+		return err
 	}
 
+	root := buildCatalogTree(variantObjects)
+
+	// Collapse single child folders
+	collapseTreeNodes(root)
+
+	// Print the tree
+	printCatalogTree(root)
+
+	return nil
+}
+
+// getCatalogName returns the catalog name to use
+func getCatalogName() string {
+	if getTreeCatalog != "" {
+		return getTreeCatalog
+	}
+	return GetConfig().CurrentCatalog
+}
+
+// parseVariantObjects parses the response into variant objects
+func parseVariantObjects(response []byte) ([]catalogmanager.VariantObject, error) {
+	var variantObjects []catalogmanager.VariantObject
+	if err := json.Unmarshal(response, &variantObjects); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %v", err)
+	}
+	return variantObjects, nil
+}
+
+// buildCatalogTree builds the complete catalog tree structure
+func buildCatalogTree(variantObjects []catalogmanager.VariantObject) *Node {
 	root := &Node{Name: "📁 Catalog"}
 
 	for _, v := range variantObjects {
 		variant, err := decompressVariantObject(v)
 		if err != nil {
-			return err
+			// Log error but continue with other variants
+			fmt.Printf("Warning: failed to decompress variant %s: %v\n", v.Name, err)
+			continue
 		}
 
-		variantNode := &Node{Name: "🧬 " + variant.Name}
+		variantNode := buildVariantNode(variant)
 		root.Children = append(root.Children, variantNode)
-
-		// Build namespace set from variant.Namespaces
-		knownNamespaces := map[string]struct{}{}
-		for _, ns := range variant.Namespaces {
-			knownNamespaces[ns] = struct{}{}
-		}
-
-		// Map to group by namespace
-		nsMap := map[string]*Node{}
-
-		process := func(objs []CatalogObject, category string, icon string) {
-			// Build lookup set for namespaces in this variant
-			nsSet := map[string]struct{}{}
-			for _, n := range variant.Namespaces {
-				nsSet[n] = struct{}{}
-			}
-
-			for _, obj := range objs {
-				segments := strings.Split(obj.Path, "/")
-				if len(segments) < 3 {
-					continue // Not enough segments
-				}
-
-				if segments[1] != "--root--" {
-					continue // Invalid prefix
-				}
-
-				var ns string
-				var pathStart int
-
-				// Determine if segments[2] is a namespace
-				candidate := segments[2]
-				if _, ok := nsSet[candidate]; ok {
-					// It is a namespace
-					ns = candidate
-					pathStart = 3
-				} else {
-					// It is part of the path
-					ns = "default"
-					pathStart = 2
-				}
-
-				// Namespace node
-				nsNode, ok := nsMap[ns]
-				if !ok {
-					nsNode = &Node{Name: "🌐 " + ns}
-					nsMap[ns] = nsNode
-					variantNode.Children = append(variantNode.Children, nsNode)
-				}
-
-				// Category node
-				var catNode *Node
-				for _, child := range nsNode.Children {
-					if child.Name == icon+" "+category {
-						catNode = child
-						break
-					}
-				}
-				if catNode == nil {
-					catNode = &Node{Name: icon + " " + category}
-					nsNode.Children = append(nsNode.Children, catNode)
-				}
-
-				insertPath(catNode, segments[pathStart:])
-			}
-		}
-
-		process(variant.SkillSets, "SkillSets", "🧠")
-		process(variant.Resources, "Resources", "📦")
 	}
 
+	return root
+}
+
+// buildVariantNode builds a tree node for a single variant
+func buildVariantNode(variant DecompressedVariantObject) *Node {
+	variantNode := &Node{Name: "🧬 " + variant.Name}
+
+	// Build namespace set for quick lookup
+	nsSet := buildNamespaceSet(variant.Namespaces)
+
+	// Map to group by namespace
+	nsMap := map[string]*Node{}
+
+	// Process skillsets and resources
+	processObjects(variant.SkillSets, "SkillSets", "🧠", variantNode, nsMap, nsSet)
+	processObjects(variant.Resources, "Resources", "📦", variantNode, nsMap, nsSet)
+
+	return variantNode
+}
+
+// buildNamespaceSet creates a set of namespaces for quick lookup
+func buildNamespaceSet(namespaces []string) map[string]struct{} {
+	nsSet := map[string]struct{}{}
+	for _, ns := range namespaces {
+		nsSet[ns] = struct{}{}
+	}
+	return nsSet
+}
+
+// processObjects processes a list of catalog objects and builds the tree structure
+func processObjects(objs []CatalogObject, category string, icon string, variantNode *Node, nsMap map[string]*Node, nsSet map[string]struct{}) {
+	for _, obj := range objs {
+		segments := strings.Split(obj.Path, "/")
+		if !isValidPath(segments) {
+			continue
+		}
+
+		ns, pathStart := determineNamespace(segments, nsSet)
+
+		// Get or create namespace node
+		nsNode := getOrCreateNamespaceNode(ns, variantNode, nsMap)
+
+		// Get or create category node
+		catNode := getOrCreateCategoryNode(nsNode, category, icon)
+
+		// Insert the path
+		insertPath(catNode, segments[pathStart:])
+	}
+}
+
+// isValidPath checks if a path has the minimum required segments and valid prefix
+func isValidPath(segments []string) bool {
+	if len(segments) < 3 {
+		return false // Not enough segments
+	}
+	return segments[1] == "--root--" // Valid prefix
+}
+
+// determineNamespace determines the namespace and path start index
+func determineNamespace(segments []string, nsSet map[string]struct{}) (string, int) {
+	candidate := segments[2]
+	if _, ok := nsSet[candidate]; ok {
+		// It is a namespace
+		return candidate, 3
+	}
+	// It is part of the path
+	return "default", 2
+}
+
+// getOrCreateNamespaceNode gets or creates a namespace node
+func getOrCreateNamespaceNode(ns string, variantNode *Node, nsMap map[string]*Node) *Node {
+	nsNode, ok := nsMap[ns]
+	if !ok {
+		nsNode = &Node{Name: "🌐 " + ns}
+		nsMap[ns] = nsNode
+		variantNode.Children = append(variantNode.Children, nsNode)
+	}
+	return nsNode
+}
+
+// getOrCreateCategoryNode gets or creates a category node
+func getOrCreateCategoryNode(nsNode *Node, category string, icon string) *Node {
+	for _, child := range nsNode.Children {
+		if child.Name == icon+" "+category {
+			return child
+		}
+	}
+	catNode := &Node{Name: icon + " " + category}
+	nsNode.Children = append(nsNode.Children, catNode)
+	return catNode
+}
+
+// collapseTreeNodes collapses single child folders in the entire tree
+func collapseTreeNodes(root *Node) {
 	for _, variantNode := range root.Children {
 		for _, nsNode := range variantNode.Children {
 			for _, catNode := range nsNode.Children {
@@ -162,13 +213,14 @@ func getTreeResource(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
+}
 
+// printCatalogTree prints the catalog tree
+func printCatalogTree(root *Node) {
 	fmt.Println(root.Name)
 	for i, child := range root.Children {
 		printTree(child, "", i == len(root.Children)-1)
 	}
-
-	return nil
 }
 
 func decompressVariantObject(obj catalogmanager.VariantObject) (DecompressedVariantObject, error) {
