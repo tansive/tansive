@@ -38,6 +38,8 @@ Read detailed Intallation and Getting Started walkthrough at [docs.tansive.io](h
 
 > **Note:** Tansive is currently in **0.1-alpha** and rapidly evolving. Expect rough edges — feedback is welcome!
 
+### Install Tansive
+
 1. **Run the Tansive Server and Tangent**
 
 ```bash
@@ -48,7 +50,7 @@ Wait for services to start.
 
 2. **Install the CLI**
 
-   Download the appropriate release binary named `tansive` from [Releases](https://github.com/tansive/tansive/releases) or build from source.
+Download the appropriate release binary named `tansive-<version>-<os>-<arch>.tar.gz` from [Releases](https://github.com/tansive/tansive/releases) or build from source.
 
 ```bash
 # Verify CLI installation
@@ -64,9 +66,13 @@ tansive login
 tansive status
 ```
 
-3. **Configure API Keys**
+### Setup a Catalog
 
-   Create a `.env` file in the project root with your OpenAI or Anthropic API Key. Replace only the API keys you want to use - keep the placeholder for keys you don't need (e.g., if you only use Claude, keep `<your-openai-key-here>` as-is).
+1. **Configure API Keys**
+
+Configure API Keys to run the sample agents.
+
+Create a `.env` file in the project root with your OpenAI or Anthropic API Key. Replace only the API key you want to use - keep the placeholder for keys you don't need (e.g., if you only use Claude, keep `<your-openai-key-here>` as-is).
 
 ```bash
 # Create the .env file
@@ -79,56 +85,66 @@ KUBECONFIG="YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgogIC0gbmFtZTogbXkt
 EOF
 ```
 
-4. **Setup the Catalog**
+2. **Setup the example Catalog via declarative scripts**
 
 ```bash
 # sets up a new catalog with dev and prod variants, and SkillSets
 bash examples/catalog_setup/setup.sh
 
-# view the catalog
+# view the catalog structure that was setup
 tansive tree
 ```
 
-5. **Run the Troubleshooter Skill**
+### Run the Example Agents
 
-   Change `model` to "gpt4o" or "claude" depending on the API Key
+**Run the Ops Troubleshooter Agent (Control agent actions via scoped Policy)**
+
+Change `model` to "gpt4o" or "claude" depending on the API Key
 
 ```bash
-# Run the Skill in 'dev' environment
+# Run in 'dev' environment (agent will redeploy a pod)
 tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
 --view dev-view \
 --input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"claude"}'
 
-# Run the Skill in 'prod' environment. Tansive policy will block redeployment in prod
+
+# Run in 'prod' environment. (policy will block redeployment)
 tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
 --view prod-view \
 --input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"claude"}'
 ```
 
-6.  **Run the Health Bot Skill**
+**Run the Health Bot Agent (Protect sensitive PHI data via session pinning)**
 
 ```bash
-# Run the Health Bot with Session pinned to John's Patient Id
-tansive session create /demo-skillsets/health-record-demo/health-record-agent --view dev-view --input-args '{"prompt":"John was looking sick. Can you please check her bloodwork?","model":"gpt4o"}'  --session-vars '{"patient_id":"H12345"}'
+# Run the Health Bot with Session pinned to John's patient_id
+tansive session create /demo-skillsets/health-record-demo/health-record-agent \
+--view dev-view \
+--input-args '{"prompt":"John was looking sick. Can you please check his bloodwork?","model":"gpt4o"}' \
+--session-vars '{"patient_id":"H12345"}'
 
-# Ask to fetch Sheila's record. Tansive will reject the bot's request
-tansive session create /demo-skillsets/health-record-demo/health-record-agent --view dev-view --input-args '{"prompt":"Sheila was looking sick. Can you please check her bloodwork?","model":"gpt4o"}'  --session-vars '{"patient_id":"H12345"}'
+
+# Try to fetch Sheila's record (expected: Tansive will reject this request)
+tansive session create /demo-skillsets/health-record-demo/health-record-agent \
+--view dev-view \
+--input-args '{"prompt":"Sheila was looking sick. Can you please check her bloodwork?","model":"gpt4o"}' \
+--session-vars '{"patient_id":"H12345"}'
 
 ```
 
 ## 📄 Documentation
 
-Full documentation and examples are available at [https://docs.tansive.io](https://docs.tansive.io)
+Documentation and examples are available at [https://docs.tansive.io](https://docs.tansive.io)
 
 ## 💬 Community and Support
 
 Questions, Feedback, Ideas?
 
-Reach out:
+👉 [Start a discussion](https://github.com/tansive/tansive/discussions)
 
-- [Discord](https://discord.gg/DARNwnyUhw)
-- [X](https://x.com/gettansive)
-- [LinkedIn](https://linkedin.com/company/tansive)
+Follow us:
+
+[X](https://x.com/gettansive) | [LinkedIn](https://linkedin.com/company/tansive)
 
 ## 💼 License
 

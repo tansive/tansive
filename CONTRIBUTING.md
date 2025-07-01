@@ -69,7 +69,9 @@ Use clear, conventional commit messages (`feat:`, `fix:`, `docs:`, etc.)
    ```
 
 8. **Open a pull request**
+
    Describe your changes clearly and reference any relevant issues.
+   Before we can merge your contribution, you’ll need to sign our **Individual Contributor License Agreement (ICLA)**. We use CLA Assistant to manage contributor agreements. You’ll see a prompt to sign when you open your first pull request. If you’d like to read it in advance, see [ICLA](ICLA).
 
 ## 📝 Code Style and Conventions
 
@@ -78,13 +80,15 @@ Use clear, conventional commit messages (`feat:`, `fix:`, `docs:`, etc.)
 - Keep PRs focused and minimal—smaller is better.
 - If adding a new feature, consider updating docs and examples.
 
+##
+
 ## 📣 Communication
 
 If you’d like to discuss something before submitting, please open an issue or reach out:
 
-- [Discord](https://discord.gg/DARNwnyUhw)
+👉 [Start a discussion](https://github.com/tansive/tansive/discussions)
 
 ## 🙏 Thank You
 
 Your involvement makes Tansive better.
-I appreciate every issue, pull request, and suggestion—no contribution is too small.
+I appreciate every issue, pull request, and suggestion — no contribution is too small.
