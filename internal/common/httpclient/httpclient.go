@@ -105,17 +105,10 @@ type RequestOptions struct {
 // Returns the response body, Location header (if present), and any error that occurred.
 // Handles authentication using either token or API key based on availability and validity.
 func (c *HTTPClient) DoRequest(opts RequestOptions) ([]byte, string, error) {
-	u, err := url.Parse(c.config.GetServerURL())
+	u, err := c.buildRequestURL(opts)
 	if err != nil {
-		return nil, "", fmt.Errorf("invalid server URL: %v", err)
+		return nil, "", err
 	}
-	u.Path = path.Join(u.Path, opts.Path)
-
-	q := u.Query()
-	for k, v := range opts.QueryParams {
-		q.Set(k, v)
-	}
-	u.RawQuery = q.Encode()
 
 	bodyReader := bytes.NewBuffer(opts.Body)
 	req, err := http.NewRequest(opts.Method, u.String(), bodyReader)
@@ -124,48 +117,8 @@ func (c *HTTPClient) DoRequest(opts RequestOptions) ([]byte, string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	// Use token if valid
-	if c.config.GetToken() != "" && !c.config.GetTokenExpiry().IsZero() {
-		expiry := c.config.GetTokenExpiry()
-		if time.Now().Before(expiry) {
-			req.Header.Set("Authorization", "Bearer "+c.config.GetToken())
-		} else {
-			if c.config.GetAPIKey() != "" {
-				req.Header.Set("Authorization", "Bearer "+c.config.GetAPIKey())
-			}
-		}
-	} else if c.config.GetAPIKey() != "" {
-		req.Header.Set("Authorization", "Bearer "+c.config.GetAPIKey())
-	}
-	// Sign request if SigningKey is present
-	keyID, privateKeyBytes := c.config.GetSigningKey()
-	if len(privateKeyBytes) == ed25519.PrivateKeySize {
-		privateKey := ed25519.PrivateKey(privateKeyBytes)
-
-		timestamp := time.Now().UTC().Format(time.RFC3339)
-
-		// Ensure the request path starts with a slash to match server expectation
-		requestPath := opts.Path
-		if !strings.HasPrefix(requestPath, "/") {
-			requestPath = "/" + requestPath
-		}
-
-		// Canonical string to sign - use requestPath to match server expectation
-		stringToSign := strings.Join([]string{
-			opts.Method,
-			requestPath,
-			u.RawQuery,
-			string(opts.Body),
-			timestamp,
-		}, "\n")
-
-		signature := ed25519.Sign(privateKey, []byte(stringToSign))
-		signatureB64 := base64.StdEncoding.EncodeToString(signature)
-
-		req.Header.Set("X-Tangent-Signature", signatureB64)
-		req.Header.Set("X-Tangent-Signature-Timestamp", timestamp)
-		req.Header.Set("X-TangentID", keyID)
-	}
+	c.setAuthHeaders(req)
+	c.signRequest(req, opts, u.RawQuery)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -179,26 +132,100 @@ func (c *HTTPClient) DoRequest(opts RequestOptions) ([]byte, string, error) {
 	}
 
 	if resp.StatusCode >= 400 {
-		var serverErr ServerError
-		if err := json.Unmarshal(body, &serverErr); err == nil && serverErr.Error != "" {
-			return nil, "", &HTTPError{
-				StatusCode: resp.StatusCode,
-				Message:    serverErr.Error,
-			}
-		}
-		if resp.StatusCode == http.StatusNotFound {
-			return nil, "", &HTTPError{
-				StatusCode: resp.StatusCode,
-				Message:    "server doesn't implement this endpoint",
-			}
-		}
-		return nil, "", &HTTPError{
-			StatusCode: resp.StatusCode,
-			Message:    string(body),
-		}
+		return nil, "", c.handleErrorResponse(resp.StatusCode, body)
 	}
 
 	return body, resp.Header.Get("Location"), nil
+}
+
+// buildRequestURL constructs the full URL for the request including path and query parameters.
+func (c *HTTPClient) buildRequestURL(opts RequestOptions) (*url.URL, error) {
+	u, err := url.Parse(c.config.GetServerURL())
+	if err != nil {
+		return nil, fmt.Errorf("invalid server URL: %v", err)
+	}
+	u.Path = path.Join(u.Path, opts.Path)
+
+	q := u.Query()
+	for k, v := range opts.QueryParams {
+		q.Set(k, v)
+	}
+	u.RawQuery = q.Encode()
+
+	return u, nil
+}
+
+// setAuthHeaders sets the appropriate Authorization header based on available credentials.
+func (c *HTTPClient) setAuthHeaders(req *http.Request) {
+	// Use token if valid
+	if c.config.GetToken() != "" && !c.config.GetTokenExpiry().IsZero() {
+		expiry := c.config.GetTokenExpiry()
+		if time.Now().Before(expiry) {
+			req.Header.Set("Authorization", "Bearer "+c.config.GetToken())
+			return
+		}
+	}
+
+	// Fall back to API key if available
+	if c.config.GetAPIKey() != "" {
+		req.Header.Set("Authorization", "Bearer "+c.config.GetAPIKey())
+	}
+}
+
+// signRequest signs the request with an Ed25519 private key if available.
+func (c *HTTPClient) signRequest(req *http.Request, opts RequestOptions, rawQuery string) {
+	keyID, privateKeyBytes := c.config.GetSigningKey()
+	if len(privateKeyBytes) != ed25519.PrivateKeySize {
+		return
+	}
+
+	privateKey := ed25519.PrivateKey(privateKeyBytes)
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+
+	// Ensure the request path starts with a slash to match server expectation
+	requestPath := opts.Path
+	if !strings.HasPrefix(requestPath, "/") {
+		requestPath = "/" + requestPath
+	}
+
+	// Canonical string to sign - use requestPath to match server expectation
+	stringToSign := strings.Join([]string{
+		opts.Method,
+		requestPath,
+		rawQuery,
+		string(opts.Body),
+		timestamp,
+	}, "\n")
+
+	signature := ed25519.Sign(privateKey, []byte(stringToSign))
+	signatureB64 := base64.StdEncoding.EncodeToString(signature)
+
+	req.Header.Set("X-Tangent-Signature", signatureB64)
+	req.Header.Set("X-Tangent-Signature-Timestamp", timestamp)
+	req.Header.Set("X-TangentID", keyID)
+}
+
+// handleErrorResponse creates an appropriate HTTPError based on the status code and response body.
+func (c *HTTPClient) handleErrorResponse(statusCode int, body []byte) error {
+	var serverErr ServerError
+	if err := json.Unmarshal(body, &serverErr); err == nil && serverErr.Error != "" {
+		return &HTTPError{
+			StatusCode: statusCode,
+			Message:    serverErr.Error,
+		}
+	}
+
+	if statusCode == http.StatusNotFound {
+		return &HTTPError{
+			StatusCode: statusCode,
+			Message:    "server doesn't implement this endpoint",
+		}
+	}
+
+	return &HTTPError{
+		StatusCode: statusCode,
+		Message:    string(body),
+	}
 }
 
 // CreateResource creates a new resource using the given JSON data.

@@ -54,6 +54,34 @@ func NewNamespaceManager(ctx context.Context, resourceJSON []byte, catalog strin
 		return nil, ErrInvalidSchema
 	}
 
+	ns, err := parseAndValidateNamespaceSchema(resourceJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validateAndSetParameters(ns, catalog, variant); err != nil {
+		return nil, err
+	}
+
+	catalogID, err := resolveCatalogID(ctx, ns.Metadata.Catalog)
+	if err != nil {
+		return nil, err
+	}
+
+	variantID, err := resolveVariantID(ctx, catalogID, ns.Metadata.Variant)
+	if err != nil {
+		return nil, err
+	}
+
+	namespace := createNamespaceModel(ns, catalogID, variantID)
+
+	return &namespaceManager{
+		namespace: namespace,
+	}, nil
+}
+
+// parseAndValidateNamespaceSchema parses the JSON and validates the namespace schema
+func parseAndValidateNamespaceSchema(resourceJSON []byte) (*namespaceSchema, apperrors.Error) {
 	ns := &namespaceSchema{}
 	if err := json.Unmarshal(resourceJSON, ns); err != nil {
 		return nil, ErrInvalidSchema.Err(err)
@@ -64,50 +92,69 @@ func NewNamespaceManager(ctx context.Context, resourceJSON []byte, catalog strin
 		return nil, ErrInvalidSchema.Err(validationErrors)
 	}
 
+	return ns, nil
+}
+
+// validateAndSetParameters validates and sets catalog and variant parameters
+func validateAndSetParameters(ns *namespaceSchema, catalog, variant string) apperrors.Error {
 	if catalog != "" {
 		if err := schemavalidator.V().Var(catalog, "resourceNameValidator"); err != nil {
-			return nil, ErrInvalidCatalog
+			return ErrInvalidCatalog
 		}
 		ns.Metadata.Catalog = catalog
 	}
 
 	if variant != "" {
 		if err := schemavalidator.V().Var(variant, "resourceNameValidator"); err != nil {
-			return nil, ErrInvalidVariant
+			return ErrInvalidVariant
 		}
 		ns.Metadata.Variant = variant
 	}
 
-	catalogID := catcommon.GetCatalogID(ctx)
-	variantID := catcommon.GetVariantID(ctx)
+	return nil
+}
 
-	if catalogID == uuid.Nil || ns.Metadata.Catalog != catcommon.GetCatalog(ctx) {
+// resolveCatalogID resolves the catalog ID from context or database lookup
+func resolveCatalogID(ctx context.Context, catalogName string) (uuid.UUID, apperrors.Error) {
+	catalogID := catcommon.GetCatalogID(ctx)
+
+	if catalogID == uuid.Nil || catalogName != catcommon.GetCatalog(ctx) {
 		var err apperrors.Error
-		// retrieve the catalogID
-		catalogID, err = db.DB(ctx).GetCatalogIDByName(ctx, ns.Metadata.Catalog)
+		catalogID, err = db.DB(ctx).GetCatalogIDByName(ctx, catalogName)
 		if err != nil {
 			if errors.Is(err, dberror.ErrNotFound) {
-				return nil, ErrCatalogNotFound
+				return uuid.Nil, ErrCatalogNotFound
 			}
 			log.Ctx(ctx).Error().Err(err).Msg("failed to load catalog")
-			return nil, err
+			return uuid.Nil, err
 		}
 	}
 
-	// retrieve the variantID
-	if variantID == uuid.Nil || ns.Metadata.Variant != catcommon.GetVariant(ctx) {
+	return catalogID, nil
+}
+
+// resolveVariantID resolves the variant ID from context or database lookup
+func resolveVariantID(ctx context.Context, catalogID uuid.UUID, variantName string) (uuid.UUID, apperrors.Error) {
+	variantID := catcommon.GetVariantID(ctx)
+
+	if variantID == uuid.Nil || variantName != catcommon.GetVariant(ctx) {
 		var err apperrors.Error
-		variantID, err = db.DB(ctx).GetVariantIDFromName(ctx, catalogID, ns.Metadata.Variant)
+		variantID, err = db.DB(ctx).GetVariantIDFromName(ctx, catalogID, variantName)
 		if err != nil {
 			if errors.Is(err, dberror.ErrNotFound) {
-				return nil, ErrVariantNotFound
+				return uuid.Nil, ErrVariantNotFound
 			}
 			log.Ctx(ctx).Error().Err(err).Msg("failed to load variant")
-			return nil, err
+			return uuid.Nil, err
 		}
 	}
 
-	namespace := models.Namespace{
+	return variantID, nil
+}
+
+// createNamespaceModel creates a namespace model from the schema and resolved IDs
+func createNamespaceModel(ns *namespaceSchema, catalogID, variantID uuid.UUID) models.Namespace {
+	return models.Namespace{
 		Description: ns.Metadata.Description,
 		VariantID:   variantID,
 		CatalogID:   catalogID,
@@ -116,10 +163,6 @@ func NewNamespaceManager(ctx context.Context, resourceJSON []byte, catalog strin
 		Variant:     ns.Metadata.Variant,
 		Info:        nil,
 	}
-
-	return &namespaceManager{
-		namespace: namespace,
-	}, nil
 }
 
 func (ns *namespaceSchema) Validate() schemaerr.ValidationErrors {

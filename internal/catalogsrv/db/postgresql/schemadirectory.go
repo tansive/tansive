@@ -394,6 +394,7 @@ func isValidPath(path string) bool {
 
 // DeleteNamespaceObjects deletes all objects in a namespace from the schema directory
 func (om *objectManager) DeleteNamespaceObjects(ctx context.Context, t catcommon.CatalogObjectType, directoryID uuid.UUID, namespace string) ([]string, apperrors.Error) {
+	// Validate tenant and table
 	tenantID := catcommon.GetTenantID(ctx)
 	if tenantID == "" {
 		return nil, dberror.ErrMissingTenantID
@@ -403,12 +404,9 @@ func (om *objectManager) DeleteNamespaceObjects(ctx context.Context, t catcommon
 		return nil, dberror.ErrInvalidInput.Msg("invalid catalog object type")
 	}
 
-	tx, err := om.conn().BeginTx(ctx, &sql.TxOptions{
-		Isolation: sql.LevelSerializable,
-	})
+	tx, err := om.beginSerializableTx(ctx)
 	if err != nil {
-		log.Ctx(ctx).Error().Err(err).Msg("failed to start transaction")
-		return nil, dberror.ErrDatabase.Err(err)
+		return nil, err
 	}
 	defer func() {
 		if err != nil {
@@ -416,7 +414,52 @@ func (om *objectManager) DeleteNamespaceObjects(ctx context.Context, t catcommon
 		}
 	}()
 
-	// Get the current directory with FOR UPDATE lock
+	dir, err := om.fetchDirectoryForUpdate(ctx, tx, tableName, tenantID, directoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	directory, err := om.parseDirectory(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	deletedPaths := om.deleteNamespacePaths(directory, namespace)
+	if len(deletedPaths) == 0 {
+		if err := om.commitTx(tx); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	updatedDir, err := om.marshalDirectory(directory)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := om.updateDirectoryInTx(ctx, tx, tableName, updatedDir, directoryID, tenantID); err != nil {
+		return nil, err
+	}
+
+	if err := om.commitTx(tx); err != nil {
+		return nil, err
+	}
+
+	return deletedPaths, nil
+}
+
+func (om *objectManager) beginSerializableTx(ctx context.Context) (*sql.Tx, apperrors.Error) {
+	tx, err := om.conn().BeginTx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+	})
+	if err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("failed to start transaction")
+		return nil, dberror.ErrDatabase.Err(err)
+	}
+	return tx, nil
+}
+
+func (om *objectManager) fetchDirectoryForUpdate(ctx context.Context, tx *sql.Tx, tableName string, tenantID catcommon.TenantId, directoryID uuid.UUID) ([]byte, apperrors.Error) {
 	var query string
 	switch tableName {
 	case "resource_directory":
@@ -427,7 +470,7 @@ func (om *objectManager) DeleteNamespaceObjects(ctx context.Context, t catcommon
 		return nil, dberror.ErrInvalidInput.Msg("invalid catalog object type")
 	}
 	var dir []byte
-	err = tx.QueryRowContext(ctx, query, tenantID, directoryID).Scan(&dir)
+	err := tx.QueryRowContext(ctx, query, tenantID, directoryID).Scan(&dir)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, dberror.ErrNotFound.Msg("directory not found")
@@ -435,15 +478,19 @@ func (om *objectManager) DeleteNamespaceObjects(ctx context.Context, t catcommon
 		log.Ctx(ctx).Error().Err(err).Msg("failed to get directory")
 		return nil, dberror.ErrDatabase.Err(err)
 	}
+	return dir, nil
+}
 
-	// Parse the directory
-	directory, errStd := models.JSONToDirectory(dir)
-	if errStd != nil {
-		log.Ctx(ctx).Error().Err(errStd).Msg("failed to unmarshal directory")
-		return nil, dberror.ErrDatabase.Err(errStd)
+func (om *objectManager) parseDirectory(dir []byte) (models.Directory, apperrors.Error) {
+	directory, err := models.JSONToDirectory(dir)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to unmarshal directory")
+		return nil, dberror.ErrDatabase.Err(err)
 	}
+	return directory, nil
+}
 
-	// Find and delete all objects in the namespace
+func (om *objectManager) deleteNamespacePaths(directory models.Directory, namespace string) []string {
 	var deletedPaths []string
 	namespacePrefix := "/--root--/" + namespace + "/"
 	for path := range directory {
@@ -452,43 +499,40 @@ func (om *objectManager) DeleteNamespaceObjects(ctx context.Context, t catcommon
 			deletedPaths = append(deletedPaths, path)
 		}
 	}
+	return deletedPaths
+}
 
-	// If no objects were deleted, return early
-	if len(deletedPaths) == 0 {
-		if err := tx.Commit(); err != nil {
-			log.Ctx(ctx).Error().Err(err).Msg("failed to commit transaction")
-			return nil, dberror.ErrDatabase.Err(err)
-		}
-		return nil, nil
+func (om *objectManager) marshalDirectory(directory models.Directory) ([]byte, apperrors.Error) {
+	updatedDir, err := models.DirectoryToJSON(directory)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to marshal directory")
+		return nil, dberror.ErrDatabase.Err(err)
 	}
+	return updatedDir, nil
+}
 
-	// Update the directory
-	updatedDir, errStd := models.DirectoryToJSON(directory)
-	if errStd != nil {
-		log.Ctx(ctx).Error().Err(errStd).Msg("failed to marshal directory")
-		return nil, dberror.ErrDatabase.Err(errStd)
-	}
-
-	// Update the directory within the transaction
+func (om *objectManager) updateDirectoryInTx(ctx context.Context, tx *sql.Tx, tableName string, updatedDir []byte, directoryID uuid.UUID, tenantID catcommon.TenantId) apperrors.Error {
+	var query string
 	switch tableName {
 	case "resource_directory":
 		query = `UPDATE resource_directory SET directory = $1 WHERE directory_id = $2 AND tenant_id = $3;`
 	case "skillset_directory":
 		query = `UPDATE skillset_directory SET directory = $1 WHERE directory_id = $2 AND tenant_id = $3;`
 	default:
-		return nil, dberror.ErrInvalidInput.Msg("invalid catalog object type")
+		return dberror.ErrInvalidInput.Msg("invalid catalog object type")
 	}
-	_, err = tx.ExecContext(ctx, query, updatedDir, directoryID, tenantID)
+	_, err := tx.ExecContext(ctx, query, updatedDir, directoryID, tenantID)
 	if err != nil {
 		log.Ctx(ctx).Error().Err(err).Msg("failed to update directory")
-		return nil, dberror.ErrDatabase.Err(err)
+		return dberror.ErrDatabase.Err(err)
 	}
+	return nil
+}
 
-	// Commit the transaction
+func (om *objectManager) commitTx(tx *sql.Tx) apperrors.Error {
 	if err := tx.Commit(); err != nil {
-		log.Ctx(ctx).Error().Err(err).Msg("failed to commit transaction")
-		return nil, dberror.ErrDatabase.Err(err)
+		log.Error().Err(err).Msg("failed to commit transaction")
+		return dberror.ErrDatabase.Err(err)
 	}
-
-	return deletedPaths, nil
+	return nil
 }

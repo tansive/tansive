@@ -18,58 +18,57 @@ type VerificationStatus struct {
 	KeyDigest string
 }
 
-func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus) error {
-	cleanPath := filepath.Clean(path)
-	if cleanPath == "" || cleanPath == "." {
-		return fmt.Errorf("invalid input path")
-	}
+type SkillNode struct {
+	ID        string
+	InvokerID string
+	Entries   []HashedLogEntry
+	Children  []*SkillNode
+}
 
-	absPath, err := filepath.Abs(cleanPath)
-	if err != nil {
-		return fmt.Errorf("failed to resolve absolute path: %w", err)
-	}
+type LogData struct {
+	InvocationMap map[string][]HashedLogEntry
+	InvokerMap    map[string]string
+	SessionID     string
+	TangentID     string
+	TangentURL    string
+}
 
-	type SkillNode struct {
-		ID        string
-		InvokerID string
-		Entries   []HashedLogEntry
-		Children  []*SkillNode
-	}
-
-	// getEntryTime extracts the timestamp from a log entry
-	getEntryTime := func(entry HashedLogEntry) time.Time {
-		if rawTime, ok := entry.Payload["time"]; ok {
-			switch v := rawTime.(type) {
-			case float64:
-				return time.UnixMilli(int64(v))
-			case int64:
-				return time.UnixMilli(v)
-			case string:
-				if parsed, err := time.Parse(time.RFC3339, v); err == nil {
-					return parsed
-				}
+// getEntryTime extracts the timestamp from a log entry
+func getEntryTime(entry HashedLogEntry) time.Time {
+	if rawTime, ok := entry.Payload["time"]; ok {
+		switch v := rawTime.(type) {
+		case float64:
+			return time.UnixMilli(int64(v))
+		case int64:
+			return time.UnixMilli(v)
+		case string:
+			if parsed, err := time.Parse(time.RFC3339, v); err == nil {
+				return parsed
 			}
 		}
+	}
+	return time.Time{}
+}
+
+// getNodeEarliestTime returns the earliest timestamp from all entries in a node
+func getNodeEarliestTime(node *SkillNode) time.Time {
+	if len(node.Entries) == 0 {
 		return time.Time{}
 	}
-
-	// getNodeEarliestTime returns the earliest timestamp from all entries in a node
-	getNodeEarliestTime := func(node *SkillNode) time.Time {
-		if len(node.Entries) == 0 {
-			return time.Time{}
+	earliest := getEntryTime(node.Entries[0])
+	for _, entry := range node.Entries {
+		if entryTime := getEntryTime(entry); !entryTime.IsZero() && (earliest.IsZero() || entryTime.Before(earliest)) {
+			earliest = entryTime
 		}
-		earliest := getEntryTime(node.Entries[0])
-		for _, entry := range node.Entries {
-			if entryTime := getEntryTime(entry); !entryTime.IsZero() && (earliest.IsZero() || entryTime.Before(earliest)) {
-				earliest = entryTime
-			}
-		}
-		return earliest
 	}
+	return earliest
+}
 
+// parseLogFile reads and parses the log file, returning structured data
+func parseLogFile(absPath string) (*LogData, error) {
 	f, err := os.Open(absPath)
 	if err != nil {
-		return fmt.Errorf("failed to open log file: %w", err)
+		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
 	defer f.Close()
 
@@ -87,7 +86,7 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 			if err == io.EOF {
 				break
 			}
-			return fmt.Errorf("failed to read log file: %w", err)
+			return nil, fmt.Errorf("failed to read log file: %w", err)
 		}
 
 		var entry HashedLogEntry
@@ -115,12 +114,22 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 		}
 	}
 
-	// --- Deterministic node building ---
+	return &LogData{
+		InvocationMap: invocationMap,
+		InvokerMap:    invokerMap,
+		SessionID:     firstSessionID,
+		TangentID:     tangentID,
+		TangentURL:    tangentURL,
+	}, nil
+}
+
+// buildSkillTree creates the skill invocation tree from parsed log data
+func buildSkillTree(logData *LogData) []*SkillNode {
 	nodes := make(map[string]*SkillNode)
 	var generalRoot *SkillNode
 
 	// First pass: create all nodes
-	for id, entries := range invocationMap {
+	for id, entries := range logData.InvocationMap {
 		// Sort entries by time ascending
 		sort.SliceStable(entries, func(i, j int) bool {
 			timeI := getEntryTime(entries[i])
@@ -139,7 +148,7 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 
 		node := &SkillNode{
 			ID:        id,
-			InvokerID: invokerMap[id],
+			InvokerID: logData.InvokerMap[id],
 			Entries:   entries,
 		}
 		nodes[id] = node
@@ -175,73 +184,6 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 		roots = unattached
 	}
 
-	// --- HTML output ---
-	htmlPath := strings.TrimSuffix(absPath, filepath.Ext(absPath)) + ".html"
-	if filepath.Dir(htmlPath) != filepath.Dir(absPath) {
-		return fmt.Errorf("invalid output path: must be in same directory as input")
-	}
-	out, err := os.Create(htmlPath)
-	if err != nil {
-		return fmt.Errorf("failed to create html output: %w", err)
-	}
-	defer out.Close()
-
-	// BEGIN HTML
-	fmt.Fprint(out, `<html><head><meta charset="UTF-8"><title>Tansive™ Session Log</title><style>`)
-	fmt.Fprint(out, cssStyle)
-	fmt.Fprint(out, `</style></head><body>
-<h1>Tansive™ Session Audit Log</h1>
-<h2><strong>Session:</strong> `+html.EscapeString(firstSessionID)+`</h2>
-<h2><strong>Tangent ID:</strong> `+html.EscapeString(tangentID)+`</h2>
-<h2><strong>Tangent URL:</strong> `+html.EscapeString(tangentURL)+`</h2>`)
-
-	if len(verificationStatus) > 0 {
-		fmt.Fprintf(out, `<h2><strong>Verification Status:</strong> %s</h2>`, html.EscapeString(str(verificationStatus[0].Verified)))
-		fmt.Fprintf(out, `<h2><strong>Key Digest:</strong> %s</h2>`, html.EscapeString(verificationStatus[0].KeyDigest))
-		if verificationStatus[0].Error != nil {
-			fmt.Fprintf(out, `<h2><strong>Error:</strong> %s</h2>`, html.EscapeString(verificationStatus[0].Error.Error()))
-		}
-	}
-	fmt.Fprint(out, `<br />`)
-
-	var renderNode func(node *SkillNode, depth int)
-	renderNode = func(node *SkillNode, depth int) {
-		// Sort children by earliest time
-		sort.SliceStable(node.Children, func(i, j int) bool {
-			timeI := getNodeEarliestTime(node.Children[i])
-			timeJ := getNodeEarliestTime(node.Children[j])
-			if timeI.IsZero() && timeJ.IsZero() {
-				return false
-			}
-			if timeI.IsZero() {
-				return false
-			}
-			if timeJ.IsZero() {
-				return true
-			}
-			return timeI.Before(timeJ)
-		})
-
-		skillName := "Skill Invocation"
-		for _, e := range node.Entries {
-			if name := str(e.Payload["skill"]); name != "" {
-				skillName = name
-				break
-			}
-		}
-		prefix := strings.Repeat("↳ ", depth)
-		fmt.Fprintf(out, `<details open><summary>%s🧠 %s</summary><div class="indent">`, prefix, html.EscapeString(skillName))
-
-		for _, entry := range node.Entries {
-			renderLogEntry(out, entry)
-		}
-
-		fmt.Fprint(out, `</div></details>`)
-		for _, child := range node.Children {
-			renderNode(child, depth+1)
-		}
-	}
-
 	// Sort roots deterministically
 	sort.SliceStable(roots, func(i, j int) bool {
 		if roots[i].ID == "__session__" {
@@ -253,8 +195,103 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 		return roots[i].ID < roots[j].ID
 	})
 
+	return roots
+}
+
+// writeHTMLHeader writes the HTML document header
+func writeHTMLHeader(out io.Writer, logData *LogData, verificationStatus []VerificationStatus) {
+	fmt.Fprint(out, `<html><head><meta charset="UTF-8"><title>Tansive™ Session Log</title><style>`)
+	fmt.Fprint(out, cssStyle)
+	fmt.Fprint(out, `</style></head><body>
+<h1>Tansive™ Session Audit Log</h1>
+<h2><strong>Session:</strong> `+html.EscapeString(logData.SessionID)+`</h2>
+<h2><strong>Tangent ID:</strong> `+html.EscapeString(logData.TangentID)+`</h2>
+<h2><strong>Tangent URL:</strong> `+html.EscapeString(logData.TangentURL)+`</h2>`)
+
+	if len(verificationStatus) > 0 {
+		fmt.Fprintf(out, `<h2><strong>Verification Status:</strong> %s</h2>`, html.EscapeString(str(verificationStatus[0].Verified)))
+		fmt.Fprintf(out, `<h2><strong>Key Digest:</strong> %s</h2>`, html.EscapeString(verificationStatus[0].KeyDigest))
+		if verificationStatus[0].Error != nil {
+			fmt.Fprintf(out, `<h2><strong>Error:</strong> %s</h2>`, html.EscapeString(verificationStatus[0].Error.Error()))
+		}
+	}
+	fmt.Fprint(out, `<br />`)
+}
+
+// renderSkillNode recursively renders a skill node and its children
+func renderSkillNode(out io.Writer, node *SkillNode, depth int) {
+	// Sort children by earliest time
+	sort.SliceStable(node.Children, func(i, j int) bool {
+		timeI := getNodeEarliestTime(node.Children[i])
+		timeJ := getNodeEarliestTime(node.Children[j])
+		if timeI.IsZero() && timeJ.IsZero() {
+			return false
+		}
+		if timeI.IsZero() {
+			return false
+		}
+		if timeJ.IsZero() {
+			return true
+		}
+		return timeI.Before(timeJ)
+	})
+
+	skillName := "Skill Invocation"
+	for _, e := range node.Entries {
+		if name := str(e.Payload["skill"]); name != "" {
+			skillName = name
+			break
+		}
+	}
+	prefix := strings.Repeat("↳ ", depth)
+	fmt.Fprintf(out, `<details open><summary>%s🧠 %s</summary><div class="indent">`, prefix, html.EscapeString(skillName))
+
+	for _, entry := range node.Entries {
+		renderLogEntry(out, entry)
+	}
+
+	fmt.Fprint(out, `</div></details>`)
+	for _, child := range node.Children {
+		renderSkillNode(out, child, depth+1)
+	}
+}
+
+func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus) error {
+	cleanPath := filepath.Clean(path)
+	if cleanPath == "" || cleanPath == "." {
+		return fmt.Errorf("invalid input path")
+	}
+
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
+
+	// Parse log file
+	logData, err := parseLogFile(absPath)
+	if err != nil {
+		return err
+	}
+
+	// Build skill tree
+	roots := buildSkillTree(logData)
+
+	// Create output file
+	htmlPath := strings.TrimSuffix(absPath, filepath.Ext(absPath)) + ".html"
+	if filepath.Dir(htmlPath) != filepath.Dir(absPath) {
+		return fmt.Errorf("invalid output path: must be in same directory as input")
+	}
+	out, err := os.Create(htmlPath)
+	if err != nil {
+		return fmt.Errorf("failed to create html output: %w", err)
+	}
+	defer out.Close()
+
+	// Write HTML content
+	writeHTMLHeader(out, logData, verificationStatus)
+
 	for _, root := range roots {
-		renderNode(root, 0)
+		renderSkillNode(out, root, 0)
 	}
 
 	fmt.Fprint(out, `</body></html>`)
@@ -275,9 +312,29 @@ func str(v any) string {
 
 func renderLogEntry(out io.Writer, entry HashedLogEntry) {
 	p := entry.Payload
+
+	// Extract and process basic fields
 	event := strings.ToUpper(str(p["event"]))
 	decision := strings.ToUpper(str(p["decision"]))
 	level := str(p["level"])
+	levelClass := getLevelClass(level)
+
+	fmt.Fprint(out, `<div class="entry">`)
+
+	// Render time
+	renderTime(out, p)
+
+	// Render basic fields
+	renderBasicFields(out, p, event, decision, level, levelClass)
+
+	// Render complex fields
+	renderComplexFields(out, p)
+
+	fmt.Fprint(out, `</div>`)
+}
+
+// getLevelClass returns the CSS class for the log level
+func getLevelClass(level string) string {
 	levelClass := "level"
 	switch level {
 	case "info":
@@ -285,66 +342,99 @@ func renderLogEntry(out io.Writer, entry HashedLogEntry) {
 	case "error":
 		levelClass += " level-error"
 	}
+	return levelClass
+}
 
-	fmt.Fprint(out, `<div class="entry">`)
+// renderTime renders the timestamp field
+func renderTime(out io.Writer, p map[string]any) {
 	if rawTime, ok := p["time"]; ok {
-		switch v := rawTime.(type) {
-		case float64:
-			ts := time.UnixMilli(int64(v)).Local().Format("2006-01-02 15:04:05 MST")
-			fmt.Fprintf(out, `<div class="time">%s</div>`, html.EscapeString(ts))
-		case int64:
-			ts := time.UnixMilli(v).Local().Format("2006-01-02 15:04:05 MST")
-			fmt.Fprintf(out, `<div class="time">%s</div>`, html.EscapeString(ts))
-		case string:
-			if parsed, err := time.Parse(time.RFC3339, v); err == nil {
-				fmt.Fprintf(out, `<div class="time">%s</div>`, html.EscapeString(parsed.Local().Format("2006-01-02 15:04:05 MST")))
-			} else {
-				fmt.Fprintf(out, `<div class="time">%s</div>`, html.EscapeString(v))
-			}
-		default:
-			fmt.Fprintf(out, `<div class="time">%s</div>`, html.EscapeString(str(rawTime)))
-		}
+		formattedTime := formatTime(rawTime)
+		fmt.Fprintf(out, `<div class="time">%s</div>`, html.EscapeString(formattedTime))
 	}
+}
 
+// formatTime formats a time value into a readable string
+func formatTime(rawTime any) string {
+	switch v := rawTime.(type) {
+	case float64:
+		return time.UnixMilli(int64(v)).Local().Format("2006-01-02 15:04:05 MST")
+	case int64:
+		return time.UnixMilli(v).Local().Format("2006-01-02 15:04:05 MST")
+	case string:
+		if parsed, err := time.Parse(time.RFC3339, v); err == nil {
+			return parsed.Local().Format("2006-01-02 15:04:05 MST")
+		}
+		return v
+	default:
+		return str(rawTime)
+	}
+}
+
+// renderBasicFields renders simple string fields
+func renderBasicFields(out io.Writer, p map[string]any, event, decision, level, levelClass string) {
+	// Render event
 	if event != "" {
 		fmt.Fprintf(out, `<div class="field"><span class="label">Event:</span><span class="value">%s</span></div>`, html.EscapeString(event))
 	}
-	for _, k := range []string{"actor", "runner", "message", "view"} {
+
+	// Render standard fields
+	standardFields := []string{"actor", "runner", "message", "view"}
+	for _, k := range standardFields {
 		if v := str(p[k]); v != "" {
 			fmt.Fprintf(out, `<div class="field"><span class="label">%s:</span><span class="value">%s</span></div>`, strings.Title(k), html.EscapeString(v))
 		}
 	}
+
+	// Render decision
 	if decision != "" {
 		fmt.Fprintf(out, `<div class="field"><span class="label">Decision:</span><span class="value">%s</span></div>`, html.EscapeString(decision))
 	}
+
+	// Render level
 	if level != "" {
 		fmt.Fprintf(out, `<span class="%s">%s</span>`, levelClass, html.EscapeString(level))
 	}
+
+	// Render status
 	if status := str(p["status"]); status != "" {
 		fmt.Fprintf(out, `<div class="field"><span class="label">Status:</span><span class="value">%s</span></div>`, html.EscapeString(status))
 	}
-	if errVal, ok := p["error"]; ok {
-		fmt.Fprintf(out, `<div class="error"><strong>Error:</strong> %s</div>`, html.EscapeString(fmt.Sprintf("%v", errVal)))
-	}
-	if args, ok := p["input_args"]; ok {
-		if b, err := json.MarshalIndent(args, "", "  "); err == nil {
-			fmt.Fprintf(out, `<div class="input"><strong>Input Args:</strong><br>%s</div>`, html.EscapeString(string(b)))
-		}
-	}
+
+	// Render context name
 	if ctx, ok := p["context_name"]; ok {
 		fmt.Fprintf(out, `<div class="field"><span class="label">Context Name:</span><span class="value">%s</span></div>`, html.EscapeString(str(ctx)))
 	}
-	if basis, ok := p["basis"]; ok {
-		if b, err := json.MarshalIndent(basis, "", "  "); err == nil {
-			fmt.Fprintf(out, `<div class="basis"><strong>Policy Basis:</strong><br><pre>%s</pre></div>`, html.EscapeString(string(b)))
+}
+
+// renderComplexFields renders complex fields that require special formatting
+func renderComplexFields(out io.Writer, p map[string]any) {
+	// Render error
+	renderErrorField(out, p)
+
+	// Render JSON fields
+	renderJSONField(out, p, "input_args", "Input Args", "input")
+	renderJSONField(out, p, "basis", "Policy Basis", "basis")
+	renderJSONField(out, p, "actions", "Actions", "actions")
+}
+
+// renderErrorField renders the error field
+func renderErrorField(out io.Writer, p map[string]any) {
+	if errVal, ok := p["error"]; ok {
+		fmt.Fprintf(out, `<div class="error"><strong>Error:</strong> %s</div>`, html.EscapeString(fmt.Sprintf("%v", errVal)))
+	}
+}
+
+// renderJSONField renders a JSON field with proper formatting
+func renderJSONField(out io.Writer, p map[string]any, fieldKey, fieldLabel, cssClass string) {
+	if fieldValue, ok := p[fieldKey]; ok {
+		if b, err := json.MarshalIndent(fieldValue, "", "  "); err == nil {
+			if cssClass == "basis" || cssClass == "actions" {
+				fmt.Fprintf(out, `<div class="%s"><strong>%s:</strong><br><pre>%s</pre></div>`, cssClass, fieldLabel, html.EscapeString(string(b)))
+			} else {
+				fmt.Fprintf(out, `<div class="%s"><strong>%s:</strong><br>%s</div>`, cssClass, fieldLabel, html.EscapeString(string(b)))
+			}
 		}
 	}
-	if acts, ok := p["actions"]; ok {
-		if b, err := json.MarshalIndent(acts, "", "  "); err == nil {
-			fmt.Fprintf(out, `<div class="actions"><strong>Actions:</strong><br><pre>%s</pre></div>`, html.EscapeString(string(b)))
-		}
-	}
-	fmt.Fprint(out, `</div>`)
 }
 
 const cssStyle = `

@@ -72,58 +72,102 @@ func createResource(cmd *cobra.Command, args []string) error {
 	var statusValues []map[string]any
 	defer func() {
 		if len(statusValues) > 0 {
-			if jsonOutput {
-				printJSON(statusValues)
-			} else {
-				for _, status := range statusValues {
-					created, exists := status["created"]
-					if !exists {
-						created = false
-					}
-					location, ok := status["location"].(string)
-					if !ok {
-						location = ""
-					}
-					if created.(bool) {
-						okLabel.Fprintf(os.Stdout, "[OK] ")
-						fmt.Fprintf(os.Stdout, "Created: %s\n", location)
-					} else {
-						if !ignoreErrors {
-							errorLabel.Fprintf(os.Stderr, "[ERROR] ")
-							fmt.Fprintf(os.Stderr, "%s: %s: %s\n", status["kind"], status["name"], status["error"])
-						} else {
-							errorLabel.Fprintf(os.Stdout, "[ERROR] ")
-							fmt.Fprintf(os.Stdout, "%s: %s: %s\n", status["kind"], status["name"], status["error"])
-						}
-					}
-				}
-			}
+			printCreateStatus(statusValues)
 		}
 	}()
 
+	return processResourcesByKind(resources, orderedResourceList, &statusValues)
+}
+
+// processResourcesByKind processes resources in the specified order by kind
+func processResourcesByKind(resources map[string]ResourceList, orderedResourceList []string, statusValues *[]map[string]any) error {
 	for _, kind := range orderedResourceList {
 		resources, ok := resources[kind]
 		if !ok {
 			continue
 		}
-		for _, resource := range resources {
-			kv, err := handleCreateResource(resource.Metadata, resource.JSON)
-			if err != nil {
-				statusValues = append(statusValues, map[string]any{
-					"kind":    resource.Metadata.Kind,
-					"name":    resource.Metadata.Metadata["name"],
-					"created": false,
-					"error":   err.Error(),
-				})
-				if !ignoreErrors {
-					return ErrAlreadyHandled
-				}
-				continue
-			}
-			statusValues = append(statusValues, kv)
+		if err := processResourcesOfKind(resources, statusValues); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+// processResourcesOfKind processes all resources of a specific kind
+func processResourcesOfKind(resources ResourceList, statusValues *[]map[string]any) error {
+	for _, resource := range resources {
+		kv, err := handleCreateResource(resource.Metadata, resource.JSON)
+		if err != nil {
+			*statusValues = append(*statusValues, createCreateErrorStatus(resource.Metadata, err))
+			if !ignoreErrors {
+				return ErrAlreadyHandled
+			}
+			continue
+		}
+		*statusValues = append(*statusValues, kv)
+	}
+	return nil
+}
+
+// createCreateErrorStatus creates an error status map for a failed resource creation operation
+func createCreateErrorStatus(resource ResourceMetadata, err error) map[string]any {
+	return map[string]any{
+		"kind":    resource.Kind,
+		"name":    resource.Metadata["name"],
+		"created": false,
+		"error":   err.Error(),
+	}
+}
+
+// printCreateStatus prints the status of resource creation operations
+func printCreateStatus(statusValues []map[string]any) {
+	if jsonOutput {
+		printJSON(statusValues)
+		return
+	}
+	printHumanReadableCreateStatus(statusValues)
+}
+
+// printHumanReadableCreateStatus prints status in human-readable format
+func printHumanReadableCreateStatus(statusValues []map[string]any) {
+	for _, status := range statusValues {
+		if isCreateSuccessStatus(status) {
+			printCreateSuccessStatus(status)
+		} else {
+			printCreateErrorStatus(status)
+		}
+	}
+}
+
+// isCreateSuccessStatus checks if the status represents a created resource
+func isCreateSuccessStatus(status map[string]any) bool {
+	created, exists := status["created"]
+	return exists && created.(bool)
+}
+
+// printCreateSuccessStatus prints a created resource status
+func printCreateSuccessStatus(status map[string]any) {
+	location, ok := status["location"].(string)
+	if !ok {
+		location = ""
+	}
+	okLabel.Fprintf(os.Stdout, "[OK] ")
+	fmt.Fprintf(os.Stdout, "Created: %s\n", location)
+}
+
+// printCreateErrorStatus prints an error status for create operations
+func printCreateErrorStatus(status map[string]any) {
+	name, exists := status["name"]
+	if !exists {
+		name = ""
+	}
+	if !ignoreErrors {
+		errorLabel.Fprintf(os.Stderr, "[ERROR] ")
+		fmt.Fprintf(os.Stderr, "%s: %s: %s\n", status["kind"], name, status["error"])
+	} else {
+		errorLabel.Fprintf(os.Stdout, "[ERROR] ")
+		fmt.Fprintf(os.Stdout, "%s: %s: %s\n", status["kind"], name, status["error"])
+	}
 }
 
 func handleCreateResource(resource ResourceMetadata, jsonData []byte) (map[string]any, error) {
