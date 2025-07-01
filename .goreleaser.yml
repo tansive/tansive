@@ -12,13 +12,9 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
       - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
@@ -33,13 +29,9 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
       - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
@@ -73,9 +65,6 @@ archives:
       - tansivesrv
     name_template: "{{ .Binary }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
     format: tar.gz
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       - tansivesrv.conf
 
@@ -84,21 +73,14 @@ archives:
       - tangent
     name_template: "{{ .Binary }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
     format: tar.gz
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
-      - scripts/docker/conf/tangent.docker.conf
-      - examples/skillset_scripts/
+      - tangent.conf
 
   - id: tansive-cli
     builds:
       - tansive-cli
     name_template: "{{ .Binary }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
-    format: tar.gz
-    format_overrides:
-      - goos: windows
-        format: zip
+    format: binary
 
 dockers:
   - image_templates:
