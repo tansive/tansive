@@ -2,30 +2,30 @@
 
 **Open platform for Policy-Driven, Auditable, Secure AI Agents**
 
-Tansive is a developer- and ops-friendly platform for building, executing, and governing AI agents and tools with declarative workflows and fine-grained policies.
+Tansive is a developer- and ops-friendly platform for building, executing, and governing AI agents and tools using declarative workflows and fine-grained policies. It’s not just another agent framework — Tansive is agnostic to both agent frameworks and programming languages.
 
-Whether you are automating tasks that touch sensitive systems, creating AI agents that securely access multiple systems to gather precise context, or building new workflows on top of existing data, Tansive provides the foundation to deploy and run them safely while meeting compliance requirements.
+With Tansive, developers can embed agentic workflows into existing applications or build new vertical solutions on top of their data without learning new languages, complex SDKs, or frameworks.
 
-Tansive is not another agent framework. It's agnostic to frameworks and languages. Bring your own agents and tools written in any language, using any interface, and Tansive will chain them together, enforce fine-grained policies, and manage their lifecycle.
+Ops teams can run agents the same way they run APIs and services today: declaratively, securely, and with full observability and compliance.
 
 ---
 
 ## ✨ Key Features
 
 - **Declarative Agent Catalog**  
-  Hierarchically structured repository of agents, tools, and contextual data, partitioned across environments like dev, stage, and prod, and across namespaces for teams or components.
+  A hierarchically structured repository of agents, tools, and contextual data, partitioned across environments like dev, stage, and prod, and segmented by namespaces for teams or components.
 
 - **Runtime Policy Enforcement**  
-  Enforce fine-grained controls over access, execution, and data flows. Every agent and tool invocation is checked against policies in real time.
+  Enforce fine-grained controls over access, execution, and data flows. Every invocation is checked against policy in real time.
 
 - **Immutable Constraints and Transforms**  
-  Pin runtime sessions to specific values and apply user-defined transforms to filter or modify input securely.
+  Pin runtime sessions to specific values and apply user-defined transforms to securely filter or modify inputs. Protect sensitive data like PII, PHI, and PCI. Apply runtime feature flags to tools and agents.
 
 - **Tamper-Evident Audit Logging**  
   Hash-linked, signed logs of every action for observability, compliance, and forensic analysis.
 
 - **Language and Framework Agnostic**  
-  Author tools and agents in any language — Python, Bash, Go, Node.js — no mandatory SDKs.
+  Author tools and agents in any language — Python, Bash, Go, Node.js — with no mandatory SDKs.
 
 - **GitOps Friendly**  
   Configure everything via declarative YAML specs version-controlled in Git, modeled on familiar cloud-native patterns.
