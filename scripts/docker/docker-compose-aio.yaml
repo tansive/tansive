@@ -33,8 +33,7 @@ services:
     restart: unless-stopped
     command: ["/app/tansivesrv", "--config", "/etc/tansive/tansivesrv.conf"]
     healthcheck:
-      test:
-        ["CMD", "wget", "--spider", "--no-check-certificate", "-q", "https://localhost:8678/ready"]
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8678/ready"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,6 +53,11 @@ services:
       - "8468:8468"
     restart: unless-stopped
     command: ["tangent", "--config", "/etc/tansive/tangent.conf"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8468/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
