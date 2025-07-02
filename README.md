@@ -1,10 +1,11 @@
 # <img src="media/tansive-logo.svg" alt="Tansive Logo" height="40" style="vertical-align: middle; margin-top: 0px; margin-right: 5px;"> Tansive
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/tansive/tansive)](https://goreportcard.com/report/github.com/tansive/tansive)
+![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/tansive/tansive?include_prereleases)
 
 ### Open platform for Policy-Driven, Auditable, Secure AI Agents
 
-Tansive lets you securely run AI agents and tools with fine-grained policies, runtime enforcement, and tamper-evident audit logs — without locking you into any specific framework, language, or cloud.
+[Tansive](htts://tansive.com) lets you securely run AI agents and tools with fine-grained policies, runtime enforcement, and tamper-evident audit logs — without locking you into any specific framework, language, or cloud.
 
 Understand and control:
 
@@ -39,6 +40,8 @@ Ops teams can run agents just like they run APIs and services today — declarat
 - [🛠️ Dependencies](#️-dependencies)
 - [🛡️ Security Notice](#️-security-notice)
 
+---
+
 ## 💡 Why Tansive?
 
 Companies and Teams want to adopt AI agents, but face real obstacles:
@@ -50,6 +53,8 @@ Companies and Teams want to adopt AI agents, but face real obstacles:
 - **Operational Overhead:** Introducing new protocols and services increases complexity, security surface area, and compliance burden.
 
 Tansive helps teams take agents to production safely — enforcing scoped policies, providing tamper-evident audit logs, and integrating without reinventing your stack.
+
+---
 
 ## ✨ Key Features
 
@@ -70,6 +75,8 @@ Tansive helps teams take agents to production safely — enforcing scoped polici
 
 - **GitOps Friendly**  
   Configure everything via declarative YAML specs version-controlled in Git, modeled on familiar cloud-native patterns.
+
+---
 
 ## 🚀 Getting Started
 
@@ -196,6 +203,8 @@ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
 ### 🙏 Ready to explore?
 
 [Get started with the docs](https://docs.tansive.io) or [start a discussion](https://github.com/tansive/tansive/discussions).
+
+---
 
 ## 📄 Documentation
 
