@@ -26,19 +26,19 @@ Ops teams can run agents just like they run APIs and services today — declarat
 
 ## 📚 Table of Contents
 
-- [💡 Why Tansive?](#-why-tansive)
-- [✨ Key Features](#-key-features)
-- [🚀 Getting Started](#-getting-started)
+- 💡 [Why Tansive?](#-why-tansive)
+- ✨ [Key Features](#-key-features)
+- 🚀 [Getting Started](#-getting-started)
   - [Architecture Diagram](#architecture-diagram)
   - [Install Tansive](#install-tansive)
   - [Setup a Catalog](#setup-a-catalog)
   - [Run the Example Agents](#run-the-example-agents)
-- [📄 Documentation](#-documentation)
-- [💬 Community and Support](#-community-and-support)
-- [💼 License](#-license)
-- [🙏 Contributing](#-contributing)
-- [🛠️ Dependencies](#️-dependencies)
-- [🛡️ Security Notice](#️-security-notice)
+- 📄 [Documentation](#-documentation)
+- 💬 [Community and Support](#-community-and-support)
+- 💼 [License](#-license)
+- 🙏 [Contributing](#-contributing)
+- 🛠️ [Dependencies](#️-dependencies)
+- 🛡️ [Security Notice](#️-security-notice)
 
 ---
 
