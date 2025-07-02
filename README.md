@@ -85,7 +85,7 @@ Tansive helps teams take agents to production safely — enforcing scoped polici
 
 This is a fictional debugging scenario involving an e-commerce application deployed on Kubernetes. The application is unable to take orders, and we use an AI Agent to investigate the issue.
 
-Two tools are available to the agent:
+Two tools are available to the agent: ([bash script](./examples/skillset_scripts/tools_script.sh))
 
 **`list-pods`** - lists the status of running pods using a label selector.
 
@@ -186,7 +186,7 @@ Two tools are available to the agent:
 
 **`resolve-patient-id`** - provides the ID of a patient (`patient_id`), given their name. ([javascript tool](./examples/skillset_scripts/resolve-patient-id.js))
 
-**`patient-bloodwork`** - returns patient's blood test results, given their `patient_id`. ([python tool](./examples/skillset_scripts/tools_script.sh))
+**`patient-bloodwork`** - returns patient's blood test results, given their `patient_id`. ([python tool](./examples/skillset_scripts/patient_bloodwork.py))
 
 The purpose of this example is to show how Tansive can be used to validate and filter inputs to enforce data boundaries. Specifically, we'll **pin the session** to John's `patient_id` so that any attempt to access records for other patients, like Sheila, will be blocked automatically.
 
