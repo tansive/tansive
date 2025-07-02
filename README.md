@@ -92,7 +92,7 @@ Two tools are available to the agent:
 The purpose of this example is to show how Tansive enforces policy at runtime. Specifically, we'll **block** the use of `restart-deployment` in the _prod_ environment, but **allow** it in _dev_ environment.
 
 <details>
-<summary>**Dev View:** Click to expand sample output</summary>
+<summary> **Dev View:** Click to expand sample output</summary>
 
 ```bash
 venv-test ❯ tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
@@ -134,7 +134,7 @@ In this interactive agent session, the `k8s_troubleshooter` used the `list_pods`
 
 Now we will do the same but switch the session to production view. We will only change the view name in the --view option.
 
-details>
+<details>
 
 <summary>**Prod View:** Click to expand sample output</summary>
 
