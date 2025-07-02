@@ -23,7 +23,7 @@ FROM alpine:3.19
 RUN apk add --no-cache \
     python3 py3-pip \
     nodejs npm \
-    bash curl git jq ca-certificates \
+    bash curl git jq ca-certificates dos2unix \
     && ln -sf python3 /usr/bin/python
 
 # Install only essential Python packages (using --break-system-packages for Alpine)

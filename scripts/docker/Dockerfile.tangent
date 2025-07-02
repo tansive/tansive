@@ -18,7 +18,7 @@ FROM python:3.12.9-slim-bookworm
 
 # Install only essential system packages (no build tools)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash curl git ca-certificates jq \
+    bash curl git ca-certificates jq dos2unix \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && apt-get clean \
