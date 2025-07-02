@@ -88,6 +88,7 @@ This is a fictional debugging scenario involving an e-commerce application deplo
 Two tools are available to the agent:
 
 **`list-pods`** - lists the status of running pods using a label selector.
+
 **`restart-deployment`** - restarts a deployment by name.
 
 The purpose of this example is to show how Tansive enforces policy at runtime. Specifically, we'll **block** the use of `restart-deployment` in the _prod_ environment, but **allow** it in _dev_ environment.
@@ -173,7 +174,7 @@ Session ID: 0197a91d-451d-75a4-894a-f126f909689f
 ```
 
 </details>
-When we switched the view to production, Tansive blocked the invocation of the `restart_deployment` skill based on the policy bound to the `prod-view`.
+When we switched the view to production, Tansive blocked the invocation of the `restart_deployment` tool based on the policy bound to the `prod-view`.
 
 ---
 
@@ -339,6 +340,8 @@ tansive login
 tansive status
 ```
 
+---
+
 ### Setup a Catalog
 
 1. **Configure API Keys**
@@ -370,6 +373,8 @@ tansive tree
 ```
 
 **Quick smoke test:** Run `tansive tree` to verify the Catalog was set up correctly.
+
+---
 
 ### Run the Example Agents
 
@@ -411,6 +416,8 @@ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
 --session-vars '{"patient_id":"H12345"}'
 
 ```
+
+---
 
 ### 🙏 Ready to explore?
 
