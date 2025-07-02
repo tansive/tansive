@@ -78,6 +78,97 @@ Tansive helps teams take agents to production safely — enforcing scoped polici
 
 ---
 
+## 🎬 See it in Action
+
+### Kubernetes Troubleshooter Agent:
+
+This is a fictional debugging scenario involving an e-commerce application deployed on Kubernetes. The application is unable to take orders, and we use an AI Agent to investigate the issue.
+
+Two tools are available to the agent:
+
+**`list-pods`** - lists the status of running pods using a label selector.
+**`restart-deployment`** - restarts a deployment by name.
+
+The purpose of this example is to show how Tansive enforces policy at runtime. Specifically, we'll **block** the use of `restart-deployment` in the _prod_ environment, but **allow** it in _dev_ environment.
+
+<details>
+<summary>**Dev View:** Click to expand sample output</summary>
+
+```bash
+venv-test ❯ tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
+--view dev-view \
+--input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"gpt4o"}'
+
+Session ID: 0197a905-8eba-7294-8822-130d2fbb940c
+    Start: 2025-06-25 14:36:43.215 PDT
+
+  [00:00.000] [tansive] ▶ requested skill: k8s_troubleshooter
+  [00:00.003] [tansive] 🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [kubernetes.troubleshoot] - to use this skill
+  [00:00.004] [system.stdiorunner] ▶ running skill: k8s_troubleshooter
+  [00:01.256] k8s_troubleshooter ▶ 🤔 Thinking: None
+  [00:01.259]  ▶ requested skill: list_pods
+  [00:01.259]  🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [kubernetes.pods.list] - to use this skill
+  [00:01.260] [system.stdiorunner] ▶ running skill: list_pods
+  [00:01.274] list_pods ▶ NAME                                READY   STATUS    RESTARTS   AGE
+                                   api-server-5f5b7f77b7-zx9qs          1/1     Running   0          2d
+                                   web-frontend-6f6f9d7b7b-xv2mn        1/1     Running   1          5h
+                                   cache-worker-7d7d9d9b7b-pv9lk        1/1     Running   0          1d
+                                   orders-api-7ff9d44db7-abcde          0/1     CrashLoopBackOff   12         3h
+  [00:01.274] list_pods ▶ # Filter applied: app=ecommerce
+  [00:01.274] [system.stdiorunner] ▶ skill completed successfully: list_pods
+  [00:06.724] k8s_troubleshooter ▶ 🤔 Thinking: The issue seems to be with the `orders-api` pod, which is in a `CrashLoopBackOff` state. This indicates that the pod is failing to start properly and is repeatedly crashing.
+
+                                   To address this, I will attempt to restart the `orders-api` deployment to see if that resolves the issue.
+  [00:06.725]  ▶ requested skill: restart_deployment
+  [00:06.725]  🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [kubernetes.deployments.restart] - to use this skill
+  [00:06.727] [system.stdiorunner] ▶ running skill: restart_deployment
+  [00:06.747] restart_deployment ▶ deployment.apps/orders-api restarted
+  [00:06.747] [system.stdiorunner] ▶ skill completed successfully: restart_deployment
+  [00:09.490] k8s_troubleshooter ▶ ✅ Final response: I have restarted the `orders-api` deployment. Please monitor the pod to ensure it transitions to a stable state. If the issue persists, further investigation may be needed to identify underlying problems, such as configuration errors or code issues.
+  [00:09.553] [system.stdiorunner] ▶ skill completed successfully: k8s_troubleshooter
+```
+
+</details>
+
+In this interactive agent session, the `k8s_troubleshooter` used the `list_pods` tool to obtain the status of running pods, determined that the _orders-api_ pod was is a _CrashLoopBackOff_ state, and used the `restart_deployment` tool in an attempt to fix the problem.
+
+Now we will do the same but switch the session to production view. We will only change the view name in the --view option.
+
+details>
+
+<summary>**Prod View:** Click to expand sample output</summary>
+
+```bash
+venv-test ❯ tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
+--view prod-view \
+--input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"gpt4o"}'
+
+Session ID: 0197a91d-451d-75a4-894a-f126f909689f
+    Start: 2025-06-25 15:02:37.235 PDT
+
+  [00:00.000] [tansive] ▶ requested skill: k8s_troubleshooter
+  [00:00.004] [tansive] 🛡️ allowed by Tansive policy: view 'prod-view' authorizes actions - [kubernetes.troubleshoot] - to use this skill
+  [00:00.005] [system.stdiorunner] ▶ running skill: k8s_troubleshooter
+  [00:01.438] k8s_troubleshooter ▶ 🤔 Thinking: None
+  [00:01.440]  ▶ requested skill: list_pods
+  [00:01.441]  🛡️ allowed by Tansive policy: view 'prod-view' authorizes actions - [kubernetes.pods.list] - to use this skill
+  [00:01.442] [system.stdiorunner] ▶ running skill: list_pods
+  [00:01.460] list_pods ▶ NAME                                READY   STATUS    RESTARTS   AGE
+                                   api-server-5f5b7f77b7-zx9qs          1/1     Running   0          2d
+                                   web-frontend-6f6f9d7b7b-xv2mn        1/1     Running   1          5h
+                                   cache-worker-7d7d9d9b7b-pv9lk        1/1     Running   0          1d
+                                   orders-api-7ff9d44db7-abcde          0/1     CrashLoopBackOff   12         3h
+                                   # Filter applied: app=e-commerce
+  [00:01.460] [system.stdiorunner] ▶ skill completed successfully: list_pods
+  [00:04.142] k8s_troubleshooter ▶ 🤔 Thinking: The `orders-api` pod is in a `CrashLoopBackOff` state, which likely indicates the issue with the order-placement in your e-commerce system. I'll attempt to restart the `orders-api` deployment to see if that resolves the problem.
+  [00:04.143]  ▶ requested skill: restart_deployment
+  [00:04.143]  🛡️ blocked by Tansive policy: view 'prod-view' does not authorize any of required actions - [kubernetes.deployments.restart] - to use this skill
+  [00:07.646] k8s_troubleshooter ▶ ✅ Final response: I tried to use Skill: functions.restart_deployment for restarting the `orders-api` deployment to resolve the order-placement issue, but it was blocked by Tansive policy. Please contact the administrator of your Tansive system to obtain access.
+  [00:07.724] [system.stdiorunner] ▶ skill completed successfully: k8s_troubleshooter
+```
+
+</details>
+
 ## 🚀 Getting Started
 
 Read the full Installation and Getting Started guide at [docs.tansive.io](https://docs.tansive.io/getting-started)
