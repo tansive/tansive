@@ -172,6 +172,114 @@ Session ID: 0197a91d-451d-75a4-894a-f126f909689f
 ```
 
 </details>
+When we switched the view to production, Tansive blocked the invocation of the `restart_deployment` skill based on the policy bound to the `prod-view`.
+
+### Health Bot:
+
+This is a fictional debugging scenario involving a health bot that answers questions about an authenticated caller's health.
+
+Two tools are available to the agent:
+
+**`resolve-patient-id`** - provides the ID of a patient (`patient_id`), given their name. This tool is written in Javascript.
+
+**`patient-bloodwork`** - returns patient's blood test results, given their `patient_id`. This tool is written in Python.
+
+The purpose of this example is to show how Tansive can be used to validate and filter inputs to enforce data boundaries. Specifically, we'll **pin the session** to John's `patient_id` so that any attempt to access records for other patients, like Sheila, will be blocked automatically.
+
+**Successful result for John:**
+
+<details>
+<summary>Click to expand sample output</summary>
+
+```bash
+myenv ❯ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
+--view dev-view \
+--input-args '{"prompt":"I think John  might be having an infection. Can you please check?","model":"gpt4o"}' \
+--session-vars '{"patient_id":"H12345"}'
+
+Session ID: 0197ba7a-274e-7603-ac6b-32763515b010
+Start: 2025-06-28 23:57:37.129 PDT
+
+[00:00.000] [tansive] ▶ requested skill: health-record-agent
+[00:00.003] [tansive] 🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.labresults.get] - to use this skill
+[00:00.004] [system.stdiorunner] ▶ running skill: health-record-agent
+[00:03.672] health-record-agent ▶ 🤔 Thinking: I'd be happy to check John's bloodwork for any signs of infection. To do this, I'll need to retrieve John's medical records.
+
+                                   First, let me resolve John's patient ID, then I'll look up his bloodwork results.
+
+[00:03.675] ▶ requested skill: resolve-patient-id
+[00:03.675] 🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.id.resolve] - to use this skill
+[00:03.677] [system.stdiorunner] ▶ running skill: resolve-patient-id
+[00:03.723] resolve-patient-id ▶ {
+"patient_id": "H12345"
+}
+[00:03.726] [system.stdiorunner] ▶ skill completed successfully: resolve-patient-id
+[00:05.456] health-record-agent ▶ 🤔 Thinking: Now I'll check John's bloodwork with the patient ID:
+[00:05.457] ▶ requested skill: patient-bloodwork
+[00:05.457] 🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.labresults.get] - to use this skill
+[00:05.460] [system.stdiorunner] ▶ running skill: patient-bloodwork
+[00:05.502] patient-bloodwork ▶ {"patient_id": "H12345", "bloodwork": {"hemoglobin": 13.5, "white_cell_count": 6.2, "platelets": 250, "glucose": 98, "cholesterol": {"total": 180, "ldl": 100, "hdl": 55}}}
+[00:05.505] [system.stdiorunner] ▶ skill completed successfully: patient-bloodwork
+[00:10.113] health-record-agent ▶ ✅ Final response: Based on John's bloodwork results, there doesn't appear to be clear evidence of an infection. Here's what I found:
+
+                                   - White blood cell count: 6.2, which is within the normal range (typically 4.5-11.0). An elevated white blood cell count would be common during an infection.
+                                   - Other values like hemoglobin (13.5) and platelets (250) are also within normal ranges.
+
+                                   While John's bloodwork doesn't show obvious signs of infection, it's important to note that:
+                                   1. Some infections might not cause changes in these basic blood parameters
+                                   2. This is just one set of bloodwork and doesn't include other infection markers like C-reactive protein or procalcitonin
+                                   3. Clinical symptoms and other diagnostic tests would be important to consider alongside these results
+
+                                   If you're concerned about specific symptoms John is experiencing, it would be beneficial to discuss those with his healthcare provider for a complete evaluation.
+
+[00:10.190] [system.stdiorunner] ▶ skill completed successfully: health-record-agent
+
+```
+
+</details>
+
+After verifying the successful retrieval of John's bloodwork, we'll test what happens when the bot tries to access another patient's records:
+
+This time, Tansive will block the request, demonstrating how session-pinned variables can act as guardrails to prevent unauthorized access, even if the tool is otherwise allowed by policy.
+
+**Access blocked for Sheila's records:**
+
+<details>
+<summary>Click to expand sample output</summary>
+
+```bash
+myenv ❯ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
+--view dev-view  \
+--input-args '{"prompt":"Sheila was looking sick. Can you please check her bloodwork?","model":"gpt4o"}' \
+--session-vars '{"patient_id":"H12345"}'
+
+Session ID: 0197ba82-2286-700f-b089-fa332ecc9554
+    Start: 2025-06-29 00:06:20.186 PDT
+
+  [00:00.000] [tansive] ▶ requested skill: health-record-agent
+  [00:00.003] [tansive] 🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.labresults.get] - to use this skill
+  [00:00.004] [system.stdiorunner] ▶ running skill: health-record-agent
+  [00:01.413] health-record-agent ▶ 🤔 Thinking: None
+  [00:01.416]  ▶ requested skill: resolve-patient-id
+  [00:01.416]  🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.id.resolve] - to use this skill
+  [00:01.417] [system.stdiorunner] ▶ running skill: resolve-patient-id
+  [00:01.460] resolve-patient-id ▶ {
+                                     "patient_id": "H23456"
+                                   }
+  [00:01.462] [system.stdiorunner] ▶ skill completed successfully: resolve-patient-id
+  [00:02.128] health-record-agent ▶ 🤔 Thinking: None
+  [00:02.129]  ▶ requested skill: patient-bloodwork
+  [00:02.129]  🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.labresults.get] - to use this skill
+  [00:02.130]  ❗ unable to transform input
+                                    Error: Unauthorized to access patient bloodwork for patient H23456
+  [00:02.799] health-record-agent ▶ ✅ Final response: I tried to use Skill: functions.patient-bloodwork for retrieving Sheila's bloodwork but it was blocked by Tansive policy. Please contact the administrator of your Tansive system to obtain access.
+  [00:02.875] [system.stdiorunner] ▶ skill completed successfully: health-record-agent
+
+```
+
+</details>
+
+Even though the policy permitted the tool use, the session variable `patient_id` locked the session to John. This ensured that attempts to access Sheila's data were rejected.
 
 ## 🚀 Getting Started
 
