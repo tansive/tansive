@@ -52,4 +52,8 @@ var (
 	// ErrInvalidArgs is returned for invalid arguments.
 	// Occurs when the arguments are nil.
 	ErrInvalidArgs = ErrShellCommandRunnerError.New("invalid args")
+
+	// ErrDos2UnixNotAvailable is returned when dos2unix command is not available.
+	// Occurs when dos2unix is not installed or not in PATH.
+	ErrDos2UnixNotAvailable = ErrShellCommandRunnerError.New("dos2unix not available")
 )

@@ -6,6 +6,7 @@ package stdiorunner
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"sync"
 
 	"github.com/h2non/filetype"
+	"github.com/rs/zerolog/log"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/tansive/tansive/internal/catalogsrv/catcommon"
@@ -100,8 +102,28 @@ func (r *runner) runWithDefaultSecurity(ctx context.Context, args *api.SkillInpu
 	}
 
 	r.homeDirPath = homeDirPath
+
+	// Normalize line endings for scripts to handle Windows \r\n
+	// This is especially important for shell scripts but can help with other script types too
+	normalizedScriptPath := scriptPath
+	if r.shouldNormalizeLineEndings(scriptPath) {
+		ext := filepath.Ext(scriptPath)
+		normalizedPath := filepath.Join(homeDirPath, "normalized_script"+ext)
+		if err := r.normalizeLineEndings(scriptPath, normalizedPath); err != nil {
+			// Check if the error is specifically about dos2unix not being available
+			if errors.Is(err, ErrDos2UnixNotAvailable) {
+				log.Ctx(ctx).Warn().Msg("dos2unix not available, proceeding with original script")
+			} else {
+				// For other errors, fail the execution
+				return ErrExecutionFailed.Msg("failed to normalize script line endings: " + err.Error())
+			}
+		} else {
+			normalizedScriptPath = normalizedPath
+		}
+	}
+
 	wrappedScriptPath := filepath.Join(homeDirPath, "wrapped.sh")
-	if err := r.writeWrappedScript(wrappedScriptPath, scriptPath, args); err != nil {
+	if err := r.writeWrappedScript(wrappedScriptPath, normalizedScriptPath, args); err != nil {
 		return ErrExecutionFailed.Msg("failed to create wrapped script: " + err.Error())
 	}
 	if err := os.Chmod(wrappedScriptPath, 0755); err != nil {
@@ -265,4 +287,52 @@ func isBinaryExecutable(path string) (bool, error) {
 	}
 
 	return binaryTypes[kind.Extension], nil
+}
+
+// shouldNormalizeLineEndings determines if a script file should have its line endings normalized
+// This is primarily for shell scripts but can be extended for other script types
+func (r *runner) shouldNormalizeLineEndings(scriptPath string) bool {
+	// Normalize for common script extensions that might have Windows line endings
+	ext := strings.ToLower(filepath.Ext(scriptPath))
+	switch ext {
+	case ".sh", ".bash", ".zsh", ".ksh":
+		return true
+	case ".py", ".js", ".ts", ".rb", ".pl", ".php":
+		// These can also benefit from line ending normalization
+		return true
+	default:
+		return false
+	}
+}
+
+// hasDos2Unix checks if dos2unix is available in PATH
+func hasDos2Unix() bool {
+	_, err := exec.LookPath("dos2unix")
+	return err == nil
+}
+
+// normalizeLineEndings converts Windows line endings (\r\n) to Unix line endings (\n)
+// This is necessary for shell scripts that may have been edited on Windows
+func (r *runner) normalizeLineEndings(source, target string) apperrors.Error {
+	// First, copy the source file to the target location
+	sourceContent, err := os.ReadFile(source)
+	if err != nil {
+		return ErrExecutionFailed.Msg("failed to read source file: " + err.Error())
+	}
+
+	if err := os.WriteFile(target, sourceContent, 0644); err != nil {
+		return ErrExecutionFailed.Msg("failed to write target file: " + err.Error())
+	}
+
+	if !hasDos2Unix() {
+		return ErrDos2UnixNotAvailable.Msg("dos2unix not found in PATH")
+	}
+
+	// Use dos2unix to convert line endings in place
+	cmd := exec.Command("dos2unix", target)
+	if err := cmd.Run(); err != nil {
+		return ErrDos2UnixNotAvailable.Msg("dos2unix command failed: " + err.Error())
+	}
+
+	return nil
 }

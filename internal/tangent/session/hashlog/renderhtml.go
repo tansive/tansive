@@ -285,7 +285,6 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 	if err != nil {
 		return fmt.Errorf("failed to create html output: %w", err)
 	}
-	defer out.Close()
 
 	// Write HTML content
 	writeHTMLHeader(out, logData, verificationStatus)
@@ -297,7 +296,13 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 	fmt.Fprint(out, `</body></html>`)
 
 	if err := out.Sync(); err != nil {
+		out.Close()
 		return fmt.Errorf("failed to sync file to disk: %w", err)
+	}
+
+	// Close the file handle before returning to avoid Windows file locking issues
+	if err := out.Close(); err != nil {
+		return fmt.Errorf("failed to close html file: %w", err)
 	}
 
 	return nil
@@ -439,21 +444,13 @@ func renderJSONField(out io.Writer, p map[string]any, fieldKey, fieldLabel, cssC
 
 const cssStyle = `
 :root {
-  --entry-bg: #fefefe;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --entry-bg: #1b1b1b;
-  }
+  --entry-bg: #2a2a2a;
 }
 body {
   font-family: sans-serif;
   margin: 2em;
-  background: #fff;
-  color: #000;
-}
-@media (prefers-color-scheme: dark) {
-  body { background: #111; color: #ccc; }
+  background: #2a2a2a;
+  color: #ddd;
 }
 h1 { font-size: 1.6em; margin-bottom: 0.3em; }
 h2 { font-weight: normal; color: #aaa; font-size: 1em; margin-bottom: 0em; }
@@ -483,13 +480,10 @@ h2 { font-weight: normal; color: #aaa; font-size: 1em; margin-bottom: 0em; }
 }
 pre {
   background: #222;
-  color: #ddd;
+  color: #eee;
   padding: 0.5em;
   border-radius: 4px;
   overflow-x: auto;
-}
-@media (prefers-color-scheme: light) {
-  pre { background: #f6f8fa; color: #333; }
 }
 details summary {
   font-size: 1em;

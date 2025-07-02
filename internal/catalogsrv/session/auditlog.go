@@ -100,6 +100,7 @@ func CompressAndEncodeAuditLogFile(path string) (string, error) {
 }
 
 // DecodeAndUncompressAuditLogFile decodes a base64-encoded log and uncompresses it with Snappy.
+// Uses atomic file operations to ensure data integrity and handles Windows file locking correctly.
 func DecodeAndUncompressAuditLogFile(encoded string, path string) error {
 	// Decode base64
 	decoded, err := base64.StdEncoding.DecodeString(encoded)
@@ -115,10 +116,16 @@ func DecodeAndUncompressAuditLogFile(encoded string, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer outFile.Close()
 
+	// Copy data to temp file
 	if _, err := io.Copy(outFile, snappyReader); err != nil {
+		outFile.Close()
 		return fmt.Errorf("decompression failed: %w", err)
+	}
+
+	// Close the file handle before renaming to avoid Windows file locking issues
+	if err := outFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temp file: %w", err)
 	}
 
 	// Atomically move temp file to final path
