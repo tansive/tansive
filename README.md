@@ -174,6 +174,8 @@ Session ID: 0197a91d-451d-75a4-894a-f126f909689f
 </details>
 When we switched the view to production, Tansive blocked the invocation of the `restart_deployment` skill based on the policy bound to the `prod-view`.
 
+<hr style="border:0;height:1px;background:#444c56;margin:1em 0;" />
+
 ### Health Bot:
 
 This is a fictional debugging scenario involving a health bot that answers questions about an authenticated caller's health.
