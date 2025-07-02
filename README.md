@@ -4,11 +4,35 @@
 
 ### Open platform for Policy-Driven, Auditable, Secure AI Agents
 
-Tansive is a developer- and ops-friendly platform for building, executing, and governing AI agents and tools using declarative workflows and fine-grained policies. It’s not just another agent framework — Tansive is agnostic to both agent frameworks and programming languages.
+Tansive lets you securely run AI agents and tools with fine-grained policies, runtime enforcement, and tamper-evident audit logs — without locking you into any specific framework, language, or cloud.
 
-With Tansive, developers can embed agentic workflows into existing applications or build new vertical solutions on top of their data without learning new languages, complex SDKs, or frameworks.
+Understand and control:
 
-Ops teams can run agents the same way they run APIs and services today: declaratively, securely, and with full observability and compliance.
+- what AI agents can access
+- which tools they can call
+- the actions they perform
+- who triggered them
+
+All with full execution graph visibility and tamper-evident audit logs.
+
+Developers can embed agent workflows into existing apps or build new solutions on top of their data — without learning complex SDKs or specialized frameworks.
+
+Ops teams can run agents just like they run APIs and services today — declaratively, securely, and with full observability and compliance.
+
+[👉 Learn more, Explore Features and Get Started](https://tansive.com)
+
+---
+
+## 📚 Table of Contents
+
+- [✨ Key Features](#-key-features)
+- [🚀 Getting Started](#-getting-started)
+- [📄 Documentation](#-documentation)
+- [💬 Community and Support](#-community-and-support)
+- [💼 License](#-license)
+- [🙏 Contributing](#-contributing)
+- [🛠️ Dependencies](#️-dependencies)
+- [🛡️ Security Notice](#️-security-notice)
 
 ---
 
@@ -21,10 +45,10 @@ Ops teams can run agents the same way they run APIs and services today: declarat
   Enforce fine-grained controls over access, execution, and data flows. Every invocation is checked against policy in real time.
 
 - **Immutable Constraints and Transforms**  
-  Pin runtime sessions to specific values and apply user-defined transforms to securely filter or modify inputs. Protect sensitive data like PII, PHI, and PCI. Apply runtime feature flags to tools and agents.
+  Pin runtime sessions to specific values and apply user-defined transforms to modify or redact inputs to agents and tools. Protect sensitive data (e.g. PII, Health data) and apply runtime feature flags.
 
 - **Tamper-Evident Audit Logging**  
-  Hash-linked, signed logs of every action for observability, compliance, and forensic analysis.
+  Maintain, hash-linked, signed logs of every action for observability, compliance, and forensic analysis.
 
 - **Language and Framework Agnostic**  
   Author tools and agents in any language — Python, Bash, Go, Node.js — with no mandatory SDKs.
@@ -36,9 +60,26 @@ Ops teams can run agents the same way they run APIs and services today: declarat
 
 ## 🚀 Getting Started
 
-Read detailed Intallation and Getting Started walkthrough at [docs.tansive.io](https://docs.tansive.io/getting-started)
+Read the full Installation and Getting Started guide at [docs.tansive.io](https://docs.tansive.io/getting-started)
 
-> **Note:** Tansive is currently in **0.1-alpha** and rapidly evolving. Expect rough edges — feedback is welcome!
+> **Note:** Tansive is currently in **0.1-alpha** and rapidly evolving. Expect rough edges — your feedback is welcome!
+
+### Architecture Diagram
+
+Below is a high-level view of how Tansive components connect:
+
+```
++-----------------+      +-------------------+
+|   Tansive CLI   | ---> |  Tansive Server   |
++-----------------+      +-------------------+
+                                 |
+                           +-------------+
+                           |   Tangent   |
+                           +-------------+
+
+```
+
+The CLI connects to the Tansive Server, which orchestrates runtime sessions via Tangent.
 
 ### Install Tansive
 
@@ -48,7 +89,7 @@ Read detailed Intallation and Getting Started walkthrough at [docs.tansive.io](h
 docker compose -f scripts/docker/docker-compose-aio.yaml up -d
 ```
 
-Wait for services to start. Use `--pull always` option if you have already run Tansive and need to get the latest images.
+Wait for the `tangent` service to reach the `started` state. Use `--pull always` option if you have already run Tansive and need to get the latest images.
 
 2. **Install the CLI**
 
@@ -82,7 +123,8 @@ Create a `.env` file in the project root with your OpenAI or Anthropic API Key. 
 cat > .env << 'EOF'
 CLAUDE_API_KEY="<your-claude-key-here>"
 OPENAI_API_KEY="<your-openai-key-here>"
-# don't modify this. you don't need a kubernetes cluster!
+
+# Note: You don’t need an actual Kubernetes cluster. This dummy config is used by the demo agent.
 KUBECONFIG="YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgogIC0gbmFtZTogbXktY2x1c3RlcgogICAgY2x1c3RlcjoKICAgICAgc2VydmVyOiBodHRwczovL2Rldi1lbnYuZXhhbXBsZS5jb20KICAgICAgY2VydGlmaWNhdG9yaXR5LWRhdGE6IDxiYXNlNjQtZW5jb2RlZC1jYS1jZXJ0Pg=="
 EOF
 ```
@@ -96,6 +138,8 @@ bash examples/catalog_setup/setup.sh
 # view the catalog structure that was setup
 tansive tree
 ```
+
+**Quick smoke test:** Run `tansive tree` to verify the Catalog was set up correctly.
 
 ### Run the Example Agents
 
@@ -134,6 +178,10 @@ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
 
 ```
 
+### 🙏 Ready to explore?
+
+[Get started with the docs](https://docs.tansive.io) or [start a discussion](https://github.com/tansive/tansive/discussions).
+
 ## 📄 Documentation
 
 Documentation and examples are available at [https://docs.tansive.io](https://docs.tansive.io)
@@ -148,6 +196,8 @@ Follow us:
 
 [X](https://x.com/gettansive) | [LinkedIn](https://linkedin.com/company/tansive)
 
+🌐 Learn more at [tansive.com](https://tansive.com)
+
 ## 💼 License
 
 Tansive is Open Source under the [Apache 2.0 License](LICENSE)
@@ -159,4 +209,22 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 Built with care by a solo founder passionate about infrastructure, AI, and developer experience.
 
-More information at [tansive.com](https://tansive.com)
+Note: Tansive was developed privately from March–July 2025 and released as open source in this public repository. Earlier development history was retained privately to maintain a clear and focused public history.
+
+## 🛠️ Dependencies:
+
+Tansive builds on widely adopted, well-tested open-source components, including:
+
+- Go standard library
+- PostgreSQL (for catalog storage)
+- Common libraries for YAML parsing, HTTP handling, and CLI UX
+- No custom cryptography
+
+Additional dependencies are listed in [`go.mod`](./go.mod)
+
+📄 [Architecture Docs](https://docs.tansive.io/architecture.md)
+
+## 🛡️ Security Notice:
+
+Tansive is in early alpha. While built on established components, it has not undergone third-party security audits.
+Use with caution in sensitive or production environments.
