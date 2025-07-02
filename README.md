@@ -28,6 +28,7 @@ Ops teams can run agents just like they run APIs and services today — declarat
 
 - 💡 [Why Tansive?](#-why-tansive)
 - ✨ [Key Features](#-key-features)
+- 🎬 [See it in Action](#-see-it-in-action)
 - 🚀 [Getting Started](#-getting-started)
   - [Architecture Diagram](#architecture-diagram)
   - [Install Tansive](#install-tansive)
@@ -174,7 +175,7 @@ Session ID: 0197a91d-451d-75a4-894a-f126f909689f
 </details>
 When we switched the view to production, Tansive blocked the invocation of the `restart_deployment` skill based on the policy bound to the `prod-view`.
 
-<hr style="border:0;height:1px;background:#444c56;margin:1em 0;" />
+---
 
 ### Health Bot:
 
@@ -283,6 +284,8 @@ Session ID: 0197ba82-2286-700f-b089-fa332ecc9554
 
 Even though the policy permitted the tool use, the session variable `patient_id` locked the session to John. This ensured that attempts to access Sheila's data were rejected.
 
+---
+
 ## 🚀 Getting Started
 
 Read the full Installation and Getting Started guide at [docs.tansive.io](https://docs.tansive.io/getting-started)
@@ -370,7 +373,11 @@ tansive tree
 
 ### Run the Example Agents
 
-**Run the Ops Troubleshooter Agent (Control agent actions via scoped Policy)**
+Run the agents shown in the "[See it in Action](#-see-it-in-action)" section.
+
+**Run the Kubernetes Troubleshooter Agent (Control agent actions via scoped Policy)**
+
+You don't need a cluster. The tools sends mock data.
 
 Change `model` to "gpt4o" or "claude" depending on the API Key
 
