@@ -19,7 +19,7 @@ Developers can embed agent workflows into existing apps or build new solutions o
 
 Ops teams can run agents just like they run APIs and services today — declaratively, securely, and with full observability and compliance.
 
-[👉 Learn more, Explore Features and Get Started](https://tansive.com)
+👉 [Learn more, Explore Features, and Get Started](https://tansive.com)
 
 ---
 
@@ -84,6 +84,8 @@ Below is a high-level view of how Tansive components connect:
 ```
 
 The CLI connects to the Tansive Server, which orchestrates runtime sessions via Tangent.
+
+[Architecture Docs](https://docs.tansive.io/architecture)
 
 ### Install Tansive
 
@@ -226,7 +228,7 @@ Tansive builds on widely adopted, well-tested open-source components, including:
 
 Additional dependencies are listed in [`go.mod`](./go.mod)
 
-📄 [Architecture Docs](https://docs.tansive.io/architecture.md)
+📄 [Architecture Docs](https://docs.tansive.io/architecture)
 
 ## 🛡️ Security Notice:
 
