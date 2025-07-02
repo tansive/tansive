@@ -285,7 +285,6 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 	if err != nil {
 		return fmt.Errorf("failed to create html output: %w", err)
 	}
-	defer out.Close()
 
 	// Write HTML content
 	writeHTMLHeader(out, logData, verificationStatus)
@@ -297,7 +296,13 @@ func RenderHashedLogToHTML(path string, verificationStatus ...VerificationStatus
 	fmt.Fprint(out, `</body></html>`)
 
 	if err := out.Sync(); err != nil {
+		out.Close()
 		return fmt.Errorf("failed to sync file to disk: %w", err)
+	}
+
+	// Close the file handle before returning to avoid Windows file locking issues
+	if err := out.Close(); err != nil {
+		return fmt.Errorf("failed to close html file: %w", err)
 	}
 
 	return nil

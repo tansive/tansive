@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -461,6 +463,103 @@ func TestDevModeSecurity(t *testing.T) {
 				if tt.check != nil {
 					tt.check(t, stdout.String(), stderr.String())
 				}
+			}
+		})
+	}
+}
+
+func TestNormalizeLineEndings(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "lineending_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create a test script with Windows line endings
+	sourcePath := filepath.Join(tempDir, "test_script.sh")
+	windowsContent := "#!/bin/bash\r\nset -e\r\necho 'Hello World'\r\n"
+	err = os.WriteFile(sourcePath, []byte(windowsContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write source file: %v", err)
+	}
+
+	// Create a runner instance for testing
+	r := &runner{}
+
+	// Test line ending normalization
+	targetPath := filepath.Join(tempDir, "normalized_script.sh")
+	err = r.normalizeLineEndings(sourcePath, targetPath)
+	if err != nil {
+		t.Fatalf("Failed to normalize line endings: %v", err)
+	}
+
+	// Read the normalized content
+	normalizedContent, err := os.ReadFile(targetPath)
+	if err != nil {
+		t.Fatalf("Failed to read normalized file: %v", err)
+	}
+
+	// Verify that \r\n has been converted to \n
+	expectedContent := "#!/bin/bash\nset -e\necho 'Hello World'\n"
+	if string(normalizedContent) != expectedContent {
+		t.Errorf("Line ending normalization failed. Expected: %q, Got: %q", expectedContent, string(normalizedContent))
+	}
+}
+
+func TestShouldNormalizeLineEndings(t *testing.T) {
+	r := &runner{}
+
+	tests := []struct {
+		name       string
+		scriptPath string
+		runtime    Runtime
+		expected   bool
+	}{
+		{
+			name:       "bash runtime should normalize",
+			scriptPath: "script.py",
+			runtime:    RuntimeBash,
+			expected:   true,
+		},
+		{
+			name:       "sh extension should normalize",
+			scriptPath: "script.sh",
+			runtime:    RuntimePython,
+			expected:   true,
+		},
+		{
+			name:       "bash extension should normalize",
+			scriptPath: "script.bash",
+			runtime:    RuntimeNode,
+			expected:   true,
+		},
+		{
+			name:       "py extension should normalize",
+			scriptPath: "script.py",
+			runtime:    RuntimePython,
+			expected:   true,
+		},
+		{
+			name:       "js extension should normalize",
+			scriptPath: "script.js",
+			runtime:    RuntimeNode,
+			expected:   true,
+		},
+		{
+			name:       "txt extension should not normalize",
+			scriptPath: "script.txt",
+			runtime:    RuntimePython,
+			expected:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r.config.Runtime = tt.runtime
+			result := r.shouldNormalizeLineEndings(tt.scriptPath)
+			if result != tt.expected {
+				t.Errorf("shouldNormalizeLineEndings(%s, %s) = %v, want %v", tt.scriptPath, tt.runtime, result, tt.expected)
 			}
 		})
 	}

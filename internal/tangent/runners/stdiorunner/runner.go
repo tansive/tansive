@@ -100,8 +100,21 @@ func (r *runner) runWithDefaultSecurity(ctx context.Context, args *api.SkillInpu
 	}
 
 	r.homeDirPath = homeDirPath
+
+	// Normalize line endings for scripts to handle Windows \r\n
+	// This is especially important for shell scripts but can help with other script types too
+	normalizedScriptPath := scriptPath
+	if r.shouldNormalizeLineEndings(scriptPath) {
+		ext := filepath.Ext(scriptPath)
+		normalizedPath := filepath.Join(homeDirPath, "normalized_script"+ext)
+		if err := r.normalizeLineEndings(scriptPath, normalizedPath); err != nil {
+			return ErrExecutionFailed.Msg("failed to normalize script line endings: " + err.Error())
+		}
+		normalizedScriptPath = normalizedPath
+	}
+
 	wrappedScriptPath := filepath.Join(homeDirPath, "wrapped.sh")
-	if err := r.writeWrappedScript(wrappedScriptPath, scriptPath, args); err != nil {
+	if err := r.writeWrappedScript(wrappedScriptPath, normalizedScriptPath, args); err != nil {
 		return ErrExecutionFailed.Msg("failed to create wrapped script: " + err.Error())
 	}
 	if err := os.Chmod(wrappedScriptPath, 0755); err != nil {
@@ -265,4 +278,39 @@ func isBinaryExecutable(path string) (bool, error) {
 	}
 
 	return binaryTypes[kind.Extension], nil
+}
+
+// shouldNormalizeLineEndings determines if a script file should have its line endings normalized
+// This is primarily for shell scripts but can be extended for other script types
+func (r *runner) shouldNormalizeLineEndings(scriptPath string) bool {
+	// Always normalize for bash runtime
+	if r.config.Runtime == RuntimeBash {
+		return true
+	}
+
+	// Normalize for common script extensions that might have Windows line endings
+	ext := strings.ToLower(filepath.Ext(scriptPath))
+	switch ext {
+	case ".sh", ".bash", ".zsh", ".ksh":
+		return true
+	case ".py", ".js", ".ts", ".rb", ".pl", ".php":
+		// These can also benefit from line ending normalization
+		return true
+	default:
+		return false
+	}
+}
+
+// normalizeLineEndings converts Windows line endings (\r\n) to Unix line endings (\n)
+// This is necessary for shell scripts that may have been edited on Windows
+func (r *runner) normalizeLineEndings(source, target string) error {
+	sourceContent, err := os.ReadFile(source)
+	if err != nil {
+		return fmt.Errorf("failed to read source file: %w", err)
+	}
+
+	// Convert \r\n to \n by removing \r characters
+	normalizedContent := strings.ReplaceAll(string(sourceContent), "\r\n", "\n")
+
+	return os.WriteFile(target, []byte(normalizedContent), 0644)
 }

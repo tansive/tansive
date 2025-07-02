@@ -153,3 +153,61 @@ func TestIsSnappyFramed(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeAndUncompressAuditLogFile(t *testing.T) {
+	// Create a temporary directory for test files
+	tempDir, err := os.MkdirTemp("", "auditlog-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	// Test data
+	testContent := []byte("This is test content that will be compressed and encoded")
+
+	// Compress with Snappy
+	var buf bytes.Buffer
+	snappyWriter := snappy.NewBufferedWriter(&buf)
+	_, err = snappyWriter.Write(testContent)
+	require.NoError(t, err)
+	err = snappyWriter.Close()
+	require.NoError(t, err)
+
+	// Encode with base64
+	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+
+	// Test output path
+	outputPath := filepath.Join(tempDir, "test_output.tlog")
+
+	// Test the function
+	err = DecodeAndUncompressAuditLogFile(encoded, outputPath)
+	require.NoError(t, err)
+
+	// Verify the file was created and contains the correct content
+	content, err := os.ReadFile(outputPath)
+	require.NoError(t, err)
+	assert.Equal(t, testContent, content)
+
+	// Verify the .tmp file was cleaned up
+	tmpPath := outputPath + ".tmp"
+	_, err = os.Stat(tmpPath)
+	assert.True(t, os.IsNotExist(err), "Temporary file should not exist after successful operation")
+}
+
+func TestDecodeAndUncompressAuditLogFileErrors(t *testing.T) {
+	// Create a temporary directory for test files
+	tempDir, err := os.MkdirTemp("", "auditlog-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	outputPath := filepath.Join(tempDir, "test_output.tlog")
+
+	// Test with invalid base64
+	err = DecodeAndUncompressAuditLogFile("invalid-base64", outputPath)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "base64 decode failed")
+
+	// Test with valid base64 but invalid snappy data
+	invalidData := base64.StdEncoding.EncodeToString([]byte("not snappy compressed"))
+	err = DecodeAndUncompressAuditLogFile(invalidData, outputPath)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "decompression failed")
+}
