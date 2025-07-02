@@ -23,7 +23,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o tansivesr
 FROM alpine:3.19
 
 RUN apk update && apk upgrade && \
-    apk add --no-cache ca-certificates tzdata && \
+    apk add --no-cache ca-certificates tzdata curl && \
     rm -rf /var/cache/apk/*
 
 RUN addgroup -g 1001 -S tansive && \
