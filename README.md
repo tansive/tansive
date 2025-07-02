@@ -91,7 +91,7 @@ Two tools are available to the agent:
 
 The purpose of this example is to show how Tansive enforces policy at runtime. Specifically, we'll **block** the use of `restart-deployment` in the _prod_ environment, but **allow** it in _dev_ environment.
 
-**Dev Environment**
+**_Dev Environment_**
 
 <details>
 <summary>Click to expand sample output</summary>
@@ -136,7 +136,7 @@ In this interactive agent session, the `k8s_troubleshooter` used the `list_pods`
 
 Now we will do the same but switch the session to production view. We will only change the view name in the --view option.
 
-**Prod View**
+**_Prod Environment_**
 
 <details>
 
@@ -186,7 +186,7 @@ Two tools are available to the agent:
 
 The purpose of this example is to show how Tansive can be used to validate and filter inputs to enforce data boundaries. Specifically, we'll **pin the session** to John's `patient_id` so that any attempt to access records for other patients, like Sheila, will be blocked automatically.
 
-**Successful result for John:**
+**_Successful result for John:_**
 
 <details>
 <summary>Click to expand sample output</summary>
@@ -242,7 +242,7 @@ After verifying the successful retrieval of John's bloodwork, we'll test what ha
 
 This time, Tansive will block the request, demonstrating how session-pinned variables can act as guardrails to prevent unauthorized access, even if the tool is otherwise allowed by policy.
 
-**Access blocked for Sheila's records:**
+**_Access blocked for Sheila's records:_**
 
 <details>
 <summary>Click to expand sample output</summary>
