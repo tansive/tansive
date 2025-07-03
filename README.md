@@ -305,7 +305,7 @@ Below is a high-level view of how Tansive components connect:
 
 ```
 
-The CLI connects to the Tansive Server, which orchestrates runtime sessions via Tangent.
+The Tansive Server acts as the control plane, coordinating policies, sessions, and audit logs. Tangent is the execution runtime that runs tools and agents. One or more Tangents can be registered with the server, and workloads are dispatched based on availability and capabilities. The CLI connects to the server for management and orchestration.
 
 [Concepts and Architecture](https://docs.tansive.io/concepts)
 
