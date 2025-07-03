@@ -20,8 +20,6 @@ Developers can embed agent workflows into existing apps or build new solutions o
 
 Ops teams can run agents just like they run APIs and services today — declaratively, securely, and with full observability and compliance.
 
-👉 [Learn more, Explore Features, and Get Started](https://tansive.com)
-
 ---
 
 ## 📚 Table of Contents
