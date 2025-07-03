@@ -90,7 +90,7 @@ Below are examples showing how Tansive enforces policies and protects sensitive 
 - 🚫 Blocking the same action in prod
 - 🔒 Restricting a health bot to one patient’s records
 
-<details> <summary>Click to expand Kubernetes Troubleshooter Example</summary>
+<details> <summary>Click to expand Kubernetes Troubleshooter Example (Control agent actions via scoped Policy)</summary>
 
 This is a fictional debugging scenario involving an e-commerce application deployed on Kubernetes. The application is unable to take orders, and we use an AI Agent to investigate the issue.
 
@@ -177,7 +177,7 @@ When we switched the view to production, Tansive blocked the invocation of the `
 
 </details>
 
-<details> <summary>Click to expand Health-Bot</summary>
+<details> <summary>Click to expand Health-Bot Example - (Protect sensitive health data via session pinning)</summary>
 
 This is a fictional debugging scenario involving a health bot that answers questions about an authenticated caller's health.
 
