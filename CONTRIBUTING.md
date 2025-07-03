@@ -1,7 +1,7 @@
 # Contributing to Tansive
 
 First of all — **thank you** for your interest in contributing!  
-Tansive is an open-source project built with care by a solo founder, and your ideas, feedback, and contributions are very welcome.
+Tansive is an open-source project, and your ideas, feedback, and contributions are very welcome.
 
 ---
 
@@ -79,8 +79,6 @@ Use clear, conventional commit messages (`feat:`, `fix:`, `docs:`, etc.)
 - Write clear comments for public functions and types.
 - Keep PRs focused and minimal—smaller is better.
 - If adding a new feature, consider updating docs and examples.
-
-##
 
 ## 📣 Communication
 
