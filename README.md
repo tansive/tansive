@@ -432,9 +432,7 @@ Questions, Feedback, Ideas?
 
 👉 [Start a discussion](https://github.com/tansive/tansive/discussions)
 
-Follow us:
-
-[X](https://x.com/gettansive) | [LinkedIn](https://linkedin.com/company/tansive)
+Follow us: [X](https://x.com/gettansive) | [LinkedIn](https://linkedin.com/company/tansive)
 
 🌐 Learn more at [tansive.com](https://tansive.com)
 
@@ -449,7 +447,7 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 Built with care by a solo founder passionate about infrastructure, AI, and developer experience.
 
-Note: Tansive was developed privately from March–July 2025 and released as open source in this public repository. Earlier development history was retained privately to maintain a clear and focused public history.
+Note: Tansive was developed privately and released as open source in this public repository to maintain a clear and focused public history going forward.
 
 ## 🛠️ Dependencies:
 
