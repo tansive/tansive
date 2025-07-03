@@ -24,6 +24,23 @@ Ops teams can run agents just like they run APIs and services today — declarat
 
 ---
 
+✨ TL;DR
+Tansive is an open platform for securely running AI agents in production:
+
+🛡️ Enforce policies over what agents can access and do
+
+📝 Record tamper-evident audit logs of every action
+
+⚙️ Integrate with any language or framework — no lock-in
+
+🚀 Try it quickly with Docker and built-in example agents
+
+⚠️ Alpha status — expect rough edges
+
+👉 Scroll down to see features, real examples, install steps, and architecture details.
+
+---
+
 ## 📚 Table of Contents
 
 - 💡 [Why Tansive?](#-why-tansive)
@@ -81,7 +98,13 @@ Tansive helps teams take agents to production safely — enforcing scoped polici
 
 ## 🎬 See it in Action
 
-### Kubernetes Troubleshooter Agent:
+Below are examples showing how Tansive enforces policies and protects sensitive data:
+
+- ✅ Allowing an agent to restart a deployment in dev
+- 🚫 Blocking the same action in prod
+- 🔒 Restricting a health bot to one patient’s records
+
+<details> <summary>Click to expand Kubernetes Troubleshooter Example</summary>
 
 This is a fictional debugging scenario involving an e-commerce application deployed on Kubernetes. The application is unable to take orders, and we use an AI Agent to investigate the issue.
 
@@ -94,9 +117,6 @@ Two tools are available to the agent: ([bash script](./examples/skillset_scripts
 The purpose of this example is to show how Tansive enforces policy at runtime. Specifically, we'll **block** the use of `restart-deployment` in the _prod_ environment, but **allow** it in _dev_ environment.
 
 **_Dev Environment_**
-
-<details>
-<summary>Click to expand sample output</summary>
 
 ```bash
 venv-test ❯ tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
@@ -132,17 +152,11 @@ Session ID: 0197a905-8eba-7294-8822-130d2fbb940c
   [00:09.553] [system.stdiorunner] ▶ skill completed successfully: k8s_troubleshooter
 ```
 
-</details>
-
 In this interactive agent session, the `k8s_troubleshooter` used the `list_pods` tool to obtain the status of running pods, determined that the _orders-api_ pod was is a _CrashLoopBackOff_ state, and used the `restart_deployment` tool in an attempt to fix the problem.
 
 Now we will do the same but switch the session to production view. We will only change the view name in the --view option.
 
 **_Prod Environment_**
-
-<details>
-
-<summary>Click to expand sample output</summary>
 
 ```bash
 venv-test ❯ tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
@@ -173,12 +187,11 @@ Session ID: 0197a91d-451d-75a4-894a-f126f909689f
   [00:07.724] [system.stdiorunner] ▶ skill completed successfully: k8s_troubleshooter
 ```
 
-</details>
 When we switched the view to production, Tansive blocked the invocation of the `restart_deployment` tool based on the policy bound to the `prod-view`.
 
----
+</details>
 
-### Health Bot:
+<details> <summary>Click to expand Health-Bot</summary>
 
 This is a fictional debugging scenario involving a health bot that answers questions about an authenticated caller's health.
 
@@ -191,9 +204,6 @@ Two tools are available to the agent:
 The purpose of this example is to show how Tansive can be used to validate and filter inputs to enforce data boundaries. Specifically, we'll **pin the session** to John's `patient_id` so that any attempt to access records for other patients, like Sheila, will be blocked automatically.
 
 **_Successful result for John:_**
-
-<details>
-<summary>Click to expand sample output</summary>
 
 ```bash
 myenv ❯ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
@@ -240,16 +250,11 @@ Start: 2025-06-28 23:57:37.129 PDT
 
 ```
 
-</details>
-
 After verifying the successful retrieval of John's bloodwork, we'll test what happens when the bot tries to access another patient's records:
 
 This time, Tansive will block the request, demonstrating how session-pinned variables can act as guardrails to prevent unauthorized access, even if the tool is otherwise allowed by policy.
 
 **_Access blocked for Sheila's records:_**
-
-<details>
-<summary>Click to expand sample output</summary>
 
 ```bash
 myenv ❯ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
@@ -281,11 +286,11 @@ Session ID: 0197ba82-2286-700f-b089-fa332ecc9554
 
 ```
 
-</details>
-
 Even though the policy permitted the tool use, the session variable `patient_id` locked the session to John. This ensured that attempts to access Sheila's data were rejected.
 
-The policies were specified declaratively - [catalog_setup.yaml](./examples/catalog_setup/catalog-setup.yaml)
+</details>
+
+The policies were specified declaratively via - [catalog_setup.yaml](./examples/catalog_setup/catalog-setup.yaml)
 
 ---
 
