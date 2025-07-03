@@ -52,9 +52,9 @@ Companies and Teams want to adopt AI agents, but face real obstacles:
 
 - **_Context:_** Agents need context from many systems, but integrating securely across APIs and data silos is hard and often requires costly new data pipelines.
 - **_AI agents are non-deterministic actors:_** Hard to observe and break traditional DevOps models. Current Authn models are designed for systems that behave deterministically, not for Agents. Prompt engineering and using one AI model as a guardrail for another are necessary, but not sufficient.
-- **_Chained Actions amplify risk:_** When agents and tools call each other, small issues have a large blast radius.
+- **_Chained Actions amplify risk:_** When agents and tools call each other, small problems have a large blast radius.
 - **_Production Gaps:_** Existing frameworks help build agents but don’t address safe deployment, policy enforcement, or auditability.
-- **_Operational Overhead:_** Introducing new protocols and services increases complexity, security surface area, and compliance burden.
+- **_Operational Overhead:_** Introducing new APIs and services that speak Agent protocols increases complexity, security surface area, and compliance burden.
 
 Tansive helps teams take agents to production safely — enforcing scoped policies, providing tamper-evident audit logs, and integrating without reinventing your stack.
 
