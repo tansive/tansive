@@ -20,6 +20,11 @@ Developers can embed agent workflows into existing apps or build new solutions o
 
 Ops teams can run agents just like they run APIs and services today — declaratively, securely, and with full observability and compliance.
 
+Tansive is in **early alpha (0.1.0)** — not production-ready, but functional enough to explore in real workflows.
+
+We’re gathering feedback from teams who care about integrating AI agents safely and governing them with clear policies and auditability.
+If these challenges matter to you, your ideas can help shape where Tansive goes next. We invite you to check out the demos, documentation, and try Tansive out.
+
 ---
 
 ## 📚 Table of Contents
@@ -298,7 +303,7 @@ Below is a high-level view of how Tansive components connect:
 
 The CLI connects to the Tansive Server, which orchestrates runtime sessions via Tangent.
 
-[Architecture Docs](https://docs.tansive.io/architecture)
+[Concepts and Architecture](https://docs.tansive.io/concepts)
 
 ### Install Tansive
 
@@ -453,7 +458,7 @@ Tansive builds on widely adopted, well-tested open-source components, including:
 
 Additional dependencies are listed in [`go.mod`](./go.mod)
 
-📄 [Architecture Docs](https://docs.tansive.io/architecture)
+📄 [Concepts and Architecture](https://docs.tansive.io/concepts)
 
 ## 🛡️ Security Notice:
 
