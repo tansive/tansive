@@ -24,23 +24,6 @@ Ops teams can run agents just like they run APIs and services today — declarat
 
 ---
 
-✨ TL;DR
-Tansive is an open platform for securely running AI agents in production:
-
-🛡️ Enforce policies over what agents can access and do
-
-📝 Record tamper-evident audit logs of every action
-
-⚙️ Integrate with any language or framework — no lock-in
-
-🚀 Try it quickly with Docker and built-in example agents
-
-⚠️ Alpha status — expect rough edges
-
-👉 Scroll down to see features, real examples, install steps, and architecture details.
-
----
-
 ## 📚 Table of Contents
 
 - 💡 [Why Tansive?](#-why-tansive)
