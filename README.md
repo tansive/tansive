@@ -467,15 +467,15 @@ the discussions forum.
 
 You shouldn't, especially if you are a company. But I hope you will consider supporting this project so it can get to a place where it earns your trust. This means trying this out in your non-production environments with real workloads, and sharing feedback on what problems you face or the problems you would like to see Tansive solve. Thank you in advance!
 
-#### I see a lot of code. Where is this coming from?
+#### I see a large initial commit. Where is this coming from?
 
-Tansive was developed privately in [github.com/anand-tnsv](https://github.com/anand-tnsv) and then moved to this repository to provide a clean starting point for open-source development. The full development history is publicly archived at that repository.
+Tansive was developed privately and then moved to this repository to provide a clean starting point for open-source development. The [respositories](https://github.com/anand-tnsv) are publicly archived for historical reference.
 
-100% of the code is from a single author @anand-tan. About 50% of the code is test. Tansive uses a lot of schemas and therefore needs lots of boiler plate tests that were readily auto-generated. That said, it stands on the shoulders of the many that wrote the excellent Go packages I've made liberal use of.
+100% of the code is from a single author @anand-tan. That said, it stands on the shoulders of the many that wrote the excellent Go packages I've made liberal use of.
 
 #### I see that Tansive is a company. Are you VC backed, bootstrapped?
 
-No. Tansive is currently funded by the sweat equity of the founder. Next steps depend on how the preview releases are received.
+No. Tansive is currently funded by sweat equity from the founder. Next steps depend on how the preview releases are received.
 
 ## 🛠️ Dependencies:
 
