@@ -452,6 +452,7 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 Built with care by a solo founder passionate about infrastructure, AI, and developer experience.
 
+<<<<<<< HEAD
 ---
 
 ## ❓ FAQs and Project Background
@@ -476,6 +477,9 @@ Tansive was developed privately in [github.com/anand-tnsv](https://github.com/an
 #### I see that Tansive is a company. Are you VC backed, bootstrapped?
 
 No. Tansive is currently funded by the sweat equity of the founder. Next steps depend on how the preview releases are received.
+=======
+Note: Tansive was developed privately and released as open source in this public repository to maintain a clear and focused public history going forward.
+>>>>>>> main
 
 ## 🛠️ Dependencies:
 
