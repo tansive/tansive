@@ -25,8 +25,6 @@ Tansive is in **early alpha (0.1.0)** — not production-ready, but functional e
 We’re gathering feedback from teams who care about integrating AI agents safely and governing them with clear policies and auditability.
 If these challenges matter to you, your ideas can help shape where Tansive goes next. We invite you to check out the demos, documentation, and try Tansive out.
 
-Tansive was developed privately in [github.com/anand-tnsv](https://github.com/anand-tnsv) and then moved to this repository to provide a clean starting point for open-source development. The full development history is publicly archived at that repository.
-
 ---
 
 ## 📚 Table of Contents
@@ -429,6 +427,8 @@ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
 
 Documentation and examples are available at [https://docs.tansive.io](https://docs.tansive.io)
 
+---
+
 ## 💬 Community and Support
 
 Questions, Feedback, Ideas?
@@ -438,6 +438,8 @@ Questions, Feedback, Ideas?
 Follow us: [X](https://x.com/gettansive) | [LinkedIn](https://linkedin.com/company/tansive)
 
 🌐 Learn more at [tansive.com](https://tansive.com)
+
+---
 
 ## 💼 License
 
@@ -449,6 +451,8 @@ Contributions, issues, and feature requests are welcome.
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 Built with care by a solo founder passionate about infrastructure, AI, and developer experience.
+
+---
 
 ## ❓ FAQs and Project Background
 
@@ -464,6 +468,8 @@ the discussions forum.
 You shouldn't, especially if you are a company. But I hope you will consider supporting this project so it can get to a place where it earns your trust. This means trying this out in your non-production environments with real workloads, and sharing feedback on what problems you face or the problems you would like to see Tansive solve. Thank you in advance!
 
 #### I see a lot of code. Where is this coming from?
+
+Tansive was developed privately in [github.com/anand-tnsv](https://github.com/anand-tnsv) and then moved to this repository to provide a clean starting point for open-source development. The full development history is publicly archived at that repository.
 
 100% of the code is from a single author @anand-tan. About 50% of the code is test. Tansive uses a lot of schemas and therefore needs lots of boiler plate tests that were readily auto-generated. That said, it stands on the shoulders of the many that wrote the excellent Go packages I've made liberal use of.
 
