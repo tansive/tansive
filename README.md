@@ -7,7 +7,7 @@
 
 ### Open platform for Policy-Driven, Auditable, Secure AI Agents
 
-[Tansive](https://tansive.com) lets you securely run AI agents and tools with fine-grained policies, runtime enforcement, and tamper-evident audit logs — without locking you into any specific framework, language, or cloud.
+[Tansive](https://tansive.com) lets you securely run AI agents and tools with fine-grained policies, runtime enforcement, and tamper-evident audit logs — so you can trust what they’re doing, without locking you into any specific framework, language, or cloud.
 
 Understand and control:
 
