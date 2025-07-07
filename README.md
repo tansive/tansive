@@ -34,6 +34,7 @@ If these challenges matter to you, your ideas can help shape where Tansive goes 
 - 💡 [Why Tansive?](#-why-tansive)
 - ✨ [Key Features](#-key-features)
 - 🎬 [See it in Action](#-see-it-in-action)
+- 📋 [What Works, What's Coming, and What to Expect](#-what-works-whats-coming-and-what-to-expect)
 - 🚀 [Getting Started](#-getting-started)
   - [Architecture Diagram](#architecture-diagram)
   - [Install Tansive](#install-tansive)
@@ -296,6 +297,43 @@ The policies were specified declaratively via - [catalog_setup.yaml](./examples/
 
 ---
 
+## 📋 What Works, What’s Coming, and What to Expect
+
+Tansive is in early alpha, which means core functionality is working but there's still plenty to build. Here's what you can expect:
+
+**What's working:**
+
+- Runtime policy enforcement ✅
+- Tamper-evident audit logs ✅
+- Multi-language tool support ✅
+- GitOps-friendly configuration ✅
+- Single User only ✅
+
+**What's coming:**
+
+- Multi-User mode with project support
+- Support for external Resources such as secret stores, vector DBs, conversational memory, cache
+- Prometheus endpoint for observability
+- Performance optimizations
+- Additional security features
+- Better documentation and examples
+
+**Alpha expectations:**
+
+- ✅ Core functionality works and is tested
+- ⚠️ API may change between releases
+- ⚠️ Some rough edges in the UX
+- ❌ Not yet production-ready for critical systems
+
+**Perfect for:**
+
+- Teams experimenting with AI agents
+- Proof-of-concept deployments
+- Early feedback and feature requests
+- Non-critical workflows
+
+---
+
 ## 🚀 Getting Started
 
 Read the full Installation and Getting Started guide at [docs.tansive.io](https://docs.tansive.io/getting-started)
@@ -319,7 +357,7 @@ Below is a high-level view of how Tansive components connect:
 
 The Tansive Server acts as the control plane, coordinating policies, sessions, and audit logs. Tangent is the execution runtime that runs tools and agents. One or more Tangents can be registered with the server, and workloads are dispatched based on availability and capabilities. The CLI connects to the server for management and orchestration.
 
-[Concepts and Architecture](https://docs.tansive.io/concepts)
+Learn more: [Concepts and Architecture](https://docs.tansive.io/concepts)
 
 ### Install Tansive
 
