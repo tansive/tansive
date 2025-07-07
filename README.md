@@ -1,4 +1,4 @@
-![Tansive Logo](media/tansive-logo.png)
+![Tansive Logo](media/tansive-logo-2.png)
 
 # Tansive
 
