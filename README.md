@@ -474,17 +474,17 @@ architecture, I purposely built Tansive to be easily extensible. Trust and exten
 
 #### Why should we trust this project now?
 
-Tansive is in early Alpha, and it's not ready for production use. But the foundations - hierarchical organization of agent and tool assets, policy-based views, dynamic runtime control via transforms, language agnostic runtime framework, tamper-evident logs, and extensible Resources and SkillSet abstractions - are designed to enable and sustain wide adoption of agents in the enterprise to automate day to day tasks without compromising on safety and compliance.
+Tansive is in early Alpha, and it's not ready for production use. But the foundations - hierarchical organization of agent and tool assets, policy-based views, dynamic runtime control via transforms, language agnostic runtime framework, tamper-evident logs, and extensible Resources and SkillSet abstractions - are designed to enable and sustain wide adoption of agents to automate day to day tasks without compromising on safety and compliance.
 
-I hope you will adopt Tansive in your non-production environments with real workloads and provide feedback on the problems you face and the capabilities you’d like Tansive to deliver. Your insights will help shape a platform that aspires to become the standard for secure, auditable, agent-driven workflows. Thank you in advance for being part of this journey.
+I hope you will try Tansive in your non-production environments with real workloads and provide feedback on the problems you face and the capabilities you’d like Tansive to deliver. Your insights will help shape a platform that aspires to become the standard for secure, auditable, agent-driven workflows. Thank you in advance for being part of this journey.
 
 #### I see a large initial commit. Where is this coming from?
 
-Tansive was developed privately by a single author [@anand-tan](https://github.com/anand-tan), and then moved to this repository to provide a clean starting point for open-source development. The [respositories](https://github.com/anand-tnsv) are publicly archived for historical reference.
+Tansive was developed privately by a single author [@anand-tan](https://github.com/anand-tan), and then moved to this repository to provide a clean starting point for open-source development. The [repositories](https://github.com/anand-tnsv) are publicly archived for historical reference.
 
 #### Is Tansive VC backed, bootstrapped?
 
-No. Tansive is currently funded by the founder. The focus right now is on proving the usefulness of the platform and building a credible foundation before considering any outside funding.
+Tansive is currently founder-funded. The focus right now is on proving the usefulness of the platform and building a credible foundation.
 
 ## 🛠️ Dependencies:
 
