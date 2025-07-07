@@ -1,4 +1,6 @@
-# <img src="media/tansive-logo.svg" alt="Tansive Logo" height="40" style="vertical-align: middle; margin-top: 0px; margin-right: 5px;"> Tansive
+![Tansive Logo](media/tansive-logo-2.png)
+
+# Tansive
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/tansive/tansive)](https://goreportcard.com/report/github.com/tansive/tansive)
 [![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/tansive/tansive?include_prereleases)](https://github.com/tansive/tansive/releases)
@@ -16,7 +18,7 @@ Understand and control:
 
 All with full execution graph visibility and tamper-evident audit logs.
 
-Developers can embed agent workflows into existing apps or build new solutions on top of their data — without learning complex SDKs or specialized frameworks.
+Developers can embed agent workflows into existing apps or build new solutions on top of their data — in their current programming language, without learning complex SDKs or specialized frameworks.
 
 Ops teams can run agents just like they run APIs and services today — declaratively, securely, and with full observability and compliance.
 
@@ -41,6 +43,7 @@ If these challenges matter to you, your ideas can help shape where Tansive goes 
 - 💬 [Community and Support](#-community-and-support)
 - 💼 [License](#-license)
 - 🙏 [Contributing](#-contributing)
+- ❓ [FAQs and Project Background](#-faqs-and-project-background)
 - 🛠️ [Dependencies](#️-dependencies)
 - 🛡️ [Security Notice](#️-security-notice)
 
@@ -50,11 +53,20 @@ If these challenges matter to you, your ideas can help shape where Tansive goes 
 
 Companies and Teams want to adopt AI agents, but face real obstacles:
 
-- **_Context:_** Agents need context from many systems, but integrating securely across APIs and data silos is hard and often requires costly new data pipelines.
-- **_AI agents are non-deterministic actors:_** Hard to observe and break traditional DevOps models. Current Authn models are designed for systems that behave deterministically, not for Agents. Prompt engineering and using one AI model as a guardrail for another are necessary, but not sufficient.
-- **_Chained Actions amplify risk:_** When agents and tools call each other, small problems have a large blast radius.
-- **_Production Gaps:_** Existing frameworks help build agents but don’t address safe deployment, policy enforcement, or auditability.
-- **_Operational Overhead:_** Introducing new APIs and services that speak Agent protocols increases complexity, security surface area, and compliance burden.
+- **Context:**
+  Agents need context from many systems, but integrating securely across APIs and data silos is hard and often requires costly new data pipelines.
+
+- **AI agents are non-deterministic actors:**
+  Hard to observe and break traditional DevOps models. Current Authn models are designed for systems that behave deterministically, not for Agents. Prompt engineering and using one AI model as a guardrail for another are necessary, but not sufficient.
+
+- **Chained Actions amplify risk:**
+  When agents and tools call each other, small problems have a large blast radius.
+
+- **Production Gaps:**
+  Existing frameworks help build agents but don’t adequately address safe deployment, policy enforcement, or auditability.
+
+- **Operational Overhead:**
+  Introducing new APIs and services that speak Agent protocols increases complexity, security surface area, and compliance burden.
 
 Tansive helps teams take agents to production safely — enforcing scoped policies, providing tamper-evident audit logs, and integrating without reinventing your stack.
 
@@ -69,7 +81,7 @@ Tansive helps teams take agents to production safely — enforcing scoped polici
   Enforce fine-grained controls over access, execution, and data flows. Every invocation is checked against policy in real time.
 
 - **Immutable Constraints and Transforms**  
-  Pin runtime sessions to specific values and apply user-defined transforms to modify or redact inputs to agents and tools. Protect sensitive data (e.g. PII, Health data) and apply runtime feature flags.
+  Pin runtime sessions to specific values and apply user-defined transforms to modify or redact inputs to agents and tools. Protect sensitive data (e.g. PII, Health data), apply runtime feature flags, and adapt or enrich inputs to match the expectations of your current systems without undertaking costly data migration initiatives
 
 - **Tamper-Evident Audit Logging**  
   Maintain, hash-linked, signed logs of every action for observability, compliance, and forensic analysis.
@@ -426,6 +438,8 @@ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
 
 Documentation and examples are available at [https://docs.tansive.io](https://docs.tansive.io)
 
+---
+
 ## 💬 Community and Support
 
 Questions, Feedback, Ideas?
@@ -435,6 +449,8 @@ Questions, Feedback, Ideas?
 Follow us: [X](https://x.com/gettansive) | [LinkedIn](https://linkedin.com/company/tansive)
 
 🌐 Learn more at [tansive.com](https://tansive.com)
+
+---
 
 ## 💼 License
 
@@ -447,7 +463,28 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 Built with care by a solo founder passionate about infrastructure, AI, and developer experience.
 
-Note: Tansive was developed privately and released as open source in this public repository to maintain a clear and focused public history going forward.
+---
+
+## ❓ FAQs and Project Background
+
+#### Why is this Open Source?
+
+Agents can do many different types of useful things for different people, teams, companies. While I've made opinionated choices on
+architecture, I purposely built Tansive to be easily extensible. Trust and extensibility don't work behind closed doors. My goal, if Tansive proves it deserves it, is for an ecosystem to evolve and flourish around it. There are enough layers and adjacencies that Tansive and other ecosystem participants can monetize without impacting the functionality, utility, and viability of the open ecosystem.
+
+#### Why should we trust this project now?
+
+Tansive is in early Alpha, and it's not ready for production use. But the foundations - hierarchical organization of agent and tool assets, policy-based views, dynamic runtime control via transforms, language agnostic runtime framework, tamper-evident logs, and extensible Resources and SkillSet abstractions - are designed to enable and sustain wide adoption of agents to automate day to day tasks without compromising on safety and compliance.
+
+I hope you will try Tansive in your non-production environments with real workloads and provide feedback on the problems you face and the capabilities you’d like Tansive to deliver. Your insights will help shape a platform that aspires to become the standard for secure, auditable, agent-driven workflows. Thank you in advance for being part of this journey.
+
+#### I see a large initial commit. Where is this coming from?
+
+Tansive was developed privately by a single author [@anand-tan](https://github.com/anand-tan), and then moved to this repository to provide a clean starting point for open-source development. The [repositories](https://github.com/anand-tnsv) are publicly archived for historical reference.
+
+#### Is Tansive VC backed, bootstrapped?
+
+Tansive is currently founder-funded. The focus right now is on proving the usefulness of the platform and building a credible foundation.
 
 ## 🛠️ Dependencies:
 
