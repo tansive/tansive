@@ -54,19 +54,19 @@ If these challenges matter to you, your ideas can help shape where Tansive goes 
 
 Companies and Teams want to adopt AI agents, but face real obstacles:
 
-- **Context:**
+- **Context:**  
   Agents need context from many systems, but integrating securely across APIs and data silos is hard and often requires costly new data pipelines.
 
-- **AI agents are non-deterministic actors:**
+- **AI agents are non-deterministic actors:**  
   Hard to observe and break traditional DevOps models. Current Authn models are designed for systems that behave deterministically, not for Agents. Prompt engineering and using one AI model as a guardrail for another are necessary, but not sufficient.
 
-- **Chained Actions amplify risk:**
+- **Chained Actions amplify risk:**  
   When agents and tools call each other, small problems have a large blast radius.
 
-- **Production Gaps:**
+- **Production Gaps:**  
   Existing frameworks help build agents but don’t adequately address safe deployment, policy enforcement, or auditability.
 
-- **Operational Overhead:**
+- **Operational Overhead:**  
   Introducing new APIs and services that speak Agent protocols increases complexity, security surface area, and compliance burden.
 
 Tansive helps teams take agents to production safely — enforcing scoped policies, providing tamper-evident audit logs, and integrating without reinventing your stack.
@@ -99,23 +99,21 @@ Tansive helps teams take agents to production safely — enforcing scoped polici
 
 Below are examples showing how Tansive enforces policies and protects sensitive data:
 
+**What you'll see**
+
 - ✅ Allowing an agent to restart a deployment in dev
 - 🚫 Blocking the same action in prod
 - 🔒 Restricting a health bot to one patient’s records
 
-### Kubernetes Troubleshooter Example (Control agent actions via scoped Policy)
+**📺 Demo Video**: [Watch the guided walkthrough](https://vimeo.com/1099257866) (🕒 8:57)
+
+### Example 1: Kubernetes Troubleshooter (Control agent actions via scoped Policy)
+
+**Demonstrates**: Policy enforcement at runtime based on environment  
+**Scenario**: AI agent debugging an e-commerce system  
+**Key Point**: Same action allowed in _dev_, blocked in _prod_
 
 <details> <summary>Click to expand Kubernetes Troubleshooter Example</summary>
-
-This is a fictional debugging scenario involving an e-commerce application deployed on Kubernetes. The application is unable to take orders, and we use an AI Agent to investigate the issue.
-
-Two tools are available to the agent: ([bash script](./examples/skillset_scripts/tools_script.sh))
-
-**`list-pods`** - lists the status of running pods using a label selector.
-
-**`restart-deployment`** - restarts a deployment by name.
-
-The purpose of this example is to show how Tansive enforces policy at runtime. Specifically, we'll **block** the use of `restart-deployment` in the _prod_ environment, but **allow** it in _dev_ environment.
 
 **_Dev Environment_**
 
@@ -192,19 +190,13 @@ When we switched the view to production, Tansive blocked the invocation of the `
 
 </details>
 
-### Health-Bot Example - (Protect sensitive health data via session pinning)
+### Example 2: Health-Bot (Protect sensitive health data via session pinning)
+
+**Demonstrates**: Data access control through session pinning  
+**Scenario**: Health bot answering patient questions  
+**Key Point**: Session locked to specific patient, blocks access to other records
 
 <details> <summary>Click to expand Health-Bot Example</summary>
-
-This is a fictional debugging scenario involving a health bot that answers questions about an authenticated caller's health.
-
-Two tools are available to the agent:
-
-**`resolve-patient-id`** - provides the ID of a patient (`patient_id`), given their name. ([javascript tool](./examples/skillset_scripts/resolve-patient-id.js))
-
-**`patient-bloodwork`** - returns patient's blood test results, given their `patient_id`. ([python tool](./examples/skillset_scripts/patient_bloodwork.py))
-
-The purpose of this example is to show how Tansive can be used to validate and filter inputs to enforce data boundaries. Specifically, we'll **pin the session** to John's `patient_id` so that any attempt to access records for other patients, like Sheila, will be blocked automatically.
 
 **_Successful result for John:_**
 
@@ -292,8 +284,6 @@ Session ID: 0197ba82-2286-700f-b089-fa332ecc9554
 Even though the policy permitted the tool use, the session variable `patient_id` locked the session to John. This ensured that attempts to access Sheila's data were rejected.
 
 </details>
-
-The policies were specified declaratively via - [catalog_setup.yaml](./examples/catalog_setup/catalog-setup.yaml)
 
 ---
 
