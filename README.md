@@ -201,7 +201,10 @@ When we switched the view to production, Tansive blocked the invocation of the `
 **_Access John's records but not Sheila's:_**
 
 ```bash
-tansive session create /demo-skillsets/health-record-demo/health-record-agent --view dev-view --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"claude"}'  --session-vars '{"patient_id":"H12345"}'
+tansive session create /demo-skillsets/health-record-demo/health-record-agent \
+--view dev-view \
+--input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"claude"}'  \
+--session-vars '{"patient_id":"H12345"}'
 
 Session ID: 0197e74f-3f06-794e-8a1b-665f861d3586
     Start: 2025-07-07 16:53:39.878 PDT
@@ -417,7 +420,9 @@ tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
 
 ```bash
 # Run the Health Bot with Session pinned to John's patient_id
-tansive session create /demo-skillsets/health-record-demo/health-record-agent --view dev-view --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"claude"}'  --session-vars '{"patient_id":"H12345"}'
+tansive session create /demo-skillsets/health-record-demo/health-record-agent \
+--view dev-view --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"claude"}' \
+--session-vars '{"patient_id":"H12345"}'
 ```
 
 ---
