@@ -312,7 +312,9 @@ Read the full Installation and Getting Started guide at [docs.tansive.io](https:
 
 ### Architecture Diagram
 
-Below is a high-level view of how Tansive components connect:
+This diagram is to set the context for the docker all-in-one quickstart image we'll use in this section. To learn about the architecture of Tansive, visit: [Concepts and Architecture](https://docs.tansive.io/concepts)
+
+Below is a high-level view of how Tansive components connect.
 
 ```
 +-----------------+      +-------------------+
@@ -326,8 +328,6 @@ Below is a high-level view of how Tansive components connect:
 ```
 
 The Tansive Server acts as the control plane, coordinating policies, sessions, and audit logs. Tangent is the execution runtime that runs tools and agents. One or more Tangents can be registered with the server, and workloads are dispatched based on availability and capabilities. The CLI connects to the server for management and orchestration.
-
-Learn more: [Concepts and Architecture](https://docs.tansive.io/concepts)
 
 ### Install Tansive
 
@@ -502,3 +502,5 @@ Additional dependencies are listed in [`go.mod`](./go.mod)
 
 Tansive is in early alpha. While built on established components, it has not undergone third-party security audits.
 Use with caution in sensitive or production environments.
+
+Read more: [Security notes for 0.1.0-alpha release](https://docs.tansive.io/architecture#current-alpha-limitations)
