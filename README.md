@@ -7,7 +7,7 @@
 
 ### Open platform for Policy-Driven, Auditable, Secure AI Agents
 
-[Tansive](https://tansive.com) lets you securely run AI agents and tools with fine-grained policies, runtime enforcement, and tamper-evident audit logs — without locking you into any specific framework, language, or cloud.
+[Tansive](https://tansive.com) lets you securely run AI agents and tools with fine-grained policies, runtime enforcement, and tamper-evident audit logs — so you can trust what they’re doing, without locking you into any specific framework, language, or cloud.
 
 Understand and control:
 
@@ -34,6 +34,7 @@ If these challenges matter to you, your ideas can help shape where Tansive goes 
 - 💡 [Why Tansive?](#-why-tansive)
 - ✨ [Key Features](#-key-features)
 - 🎬 [See it in Action](#-see-it-in-action)
+- 📋 [What Works, What's Coming, and What to Expect](#-what-works-whats-coming-and-what-to-expect)
 - 🚀 [Getting Started](#-getting-started)
   - [Architecture Diagram](#architecture-diagram)
   - [Install Tansive](#install-tansive)
@@ -53,19 +54,19 @@ If these challenges matter to you, your ideas can help shape where Tansive goes 
 
 Companies and Teams want to adopt AI agents, but face real obstacles:
 
-- **Context:**
+- **Context:**  
   Agents need context from many systems, but integrating securely across APIs and data silos is hard and often requires costly new data pipelines.
 
-- **AI agents are non-deterministic actors:**
+- **AI agents are non-deterministic actors:**  
   Hard to observe and break traditional DevOps models. Current Authn models are designed for systems that behave deterministically, not for Agents. Prompt engineering and using one AI model as a guardrail for another are necessary, but not sufficient.
 
-- **Chained Actions amplify risk:**
+- **Chained Actions amplify risk:**  
   When agents and tools call each other, small problems have a large blast radius.
 
-- **Production Gaps:**
+- **Production Gaps:**  
   Existing frameworks help build agents but don’t adequately address safe deployment, policy enforcement, or auditability.
 
-- **Operational Overhead:**
+- **Operational Overhead:**  
   Introducing new APIs and services that speak Agent protocols increases complexity, security surface area, and compliance burden.
 
 Tansive helps teams take agents to production safely — enforcing scoped policies, providing tamper-evident audit logs, and integrating without reinventing your stack.
@@ -98,23 +99,21 @@ Tansive helps teams take agents to production safely — enforcing scoped polici
 
 Below are examples showing how Tansive enforces policies and protects sensitive data:
 
+**What you'll see**
+
 - ✅ Allowing an agent to restart a deployment in dev
 - 🚫 Blocking the same action in prod
 - 🔒 Restricting a health bot to one patient’s records
 
-### Kubernetes Troubleshooter Example (Control agent actions via scoped Policy)
+**📺 Demo Video**: [Watch the guided walkthrough](https://vimeo.com/1099257866) (🕒 8:57)
+
+### Example 1: Kubernetes Troubleshooter (Control agent actions via scoped Policy)
+
+**Demonstrates**: Policy enforcement at runtime based on environment  
+**Scenario**: AI agent debugging an e-commerce system  
+**Key Point**: Same action allowed in _dev_, blocked in _prod_
 
 <details> <summary>Click to expand Kubernetes Troubleshooter Example</summary>
-
-This is a fictional debugging scenario involving an e-commerce application deployed on Kubernetes. The application is unable to take orders, and we use an AI Agent to investigate the issue.
-
-Two tools are available to the agent: ([bash script](./examples/skillset_scripts/tools_script.sh))
-
-**`list-pods`** - lists the status of running pods using a label selector.
-
-**`restart-deployment`** - restarts a deployment by name.
-
-The purpose of this example is to show how Tansive enforces policy at runtime. Specifically, we'll **block** the use of `restart-deployment` in the _prod_ environment, but **allow** it in _dev_ environment.
 
 **_Dev Environment_**
 
@@ -191,108 +190,117 @@ When we switched the view to production, Tansive blocked the invocation of the `
 
 </details>
 
-### Health-Bot Example - (Protect sensitive health data via session pinning)
+### Example 2: Health-Bot (Protect sensitive health data via session pinning)
+
+**Demonstrates**: Data access control through session pinning  
+**Scenario**: Health bot answering patient questions  
+**Key Point**: Session locked to specific patient, blocks access to other records
 
 <details> <summary>Click to expand Health-Bot Example</summary>
 
-This is a fictional debugging scenario involving a health bot that answers questions about an authenticated caller's health.
-
-Two tools are available to the agent:
-
-**`resolve-patient-id`** - provides the ID of a patient (`patient_id`), given their name. ([javascript tool](./examples/skillset_scripts/resolve-patient-id.js))
-
-**`patient-bloodwork`** - returns patient's blood test results, given their `patient_id`. ([python tool](./examples/skillset_scripts/patient_bloodwork.py))
-
-The purpose of this example is to show how Tansive can be used to validate and filter inputs to enforce data boundaries. Specifically, we'll **pin the session** to John's `patient_id` so that any attempt to access records for other patients, like Sheila, will be blocked automatically.
-
-**_Successful result for John:_**
+**_Access John's records but not Sheila's:_**
 
 ```bash
-myenv ❯ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
+tansive session create /demo-skillsets/health-record-demo/health-record-agent \
 --view dev-view \
---input-args '{"prompt":"I think John  might be having an infection. Can you please check?","model":"gpt4o"}' \
+--input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"claude"}'  \
 --session-vars '{"patient_id":"H12345"}'
 
-Session ID: 0197ba7a-274e-7603-ac6b-32763515b010
-Start: 2025-06-28 23:57:37.129 PDT
-
-[00:00.000] [tansive] ▶ requested skill: health-record-agent
-[00:00.003] [tansive] 🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.labresults.get] - to use this skill
-[00:00.004] [system.stdiorunner] ▶ running skill: health-record-agent
-[00:03.672] health-record-agent ▶ 🤔 Thinking: I'd be happy to check John's bloodwork for any signs of infection. To do this, I'll need to retrieve John's medical records.
-
-                                   First, let me resolve John's patient ID, then I'll look up his bloodwork results.
-
-[00:03.675] ▶ requested skill: resolve-patient-id
-[00:03.675] 🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.id.resolve] - to use this skill
-[00:03.677] [system.stdiorunner] ▶ running skill: resolve-patient-id
-[00:03.723] resolve-patient-id ▶ {
-"patient_id": "H12345"
-}
-[00:03.726] [system.stdiorunner] ▶ skill completed successfully: resolve-patient-id
-[00:05.456] health-record-agent ▶ 🤔 Thinking: Now I'll check John's bloodwork with the patient ID:
-[00:05.457] ▶ requested skill: patient-bloodwork
-[00:05.457] 🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.labresults.get] - to use this skill
-[00:05.460] [system.stdiorunner] ▶ running skill: patient-bloodwork
-[00:05.502] patient-bloodwork ▶ {"patient_id": "H12345", "bloodwork": {"hemoglobin": 13.5, "white_cell_count": 6.2, "platelets": 250, "glucose": 98, "cholesterol": {"total": 180, "ldl": 100, "hdl": 55}}}
-[00:05.505] [system.stdiorunner] ▶ skill completed successfully: patient-bloodwork
-[00:10.113] health-record-agent ▶ ✅ Final response: Based on John's bloodwork results, there doesn't appear to be clear evidence of an infection. Here's what I found:
-
-                                   - White blood cell count: 6.2, which is within the normal range (typically 4.5-11.0). An elevated white blood cell count would be common during an infection.
-                                   - Other values like hemoglobin (13.5) and platelets (250) are also within normal ranges.
-
-                                   While John's bloodwork doesn't show obvious signs of infection, it's important to note that:
-                                   1. Some infections might not cause changes in these basic blood parameters
-                                   2. This is just one set of bloodwork and doesn't include other infection markers like C-reactive protein or procalcitonin
-                                   3. Clinical symptoms and other diagnostic tests would be important to consider alongside these results
-
-                                   If you're concerned about specific symptoms John is experiencing, it would be beneficial to discuss those with his healthcare provider for a complete evaluation.
-
-[00:10.190] [system.stdiorunner] ▶ skill completed successfully: health-record-agent
-
-```
-
-After verifying the successful retrieval of John's bloodwork, we'll test what happens when the bot tries to access another patient's records:
-
-This time, Tansive will block the request, demonstrating how session-pinned variables can act as guardrails to prevent unauthorized access, even if the tool is otherwise allowed by policy.
-
-**_Access blocked for Sheila's records:_**
-
-```bash
-myenv ❯ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
---view dev-view  \
---input-args '{"prompt":"Sheila was looking sick. Can you please check her bloodwork?","model":"gpt4o"}' \
---session-vars '{"patient_id":"H12345"}'
-
-Session ID: 0197ba82-2286-700f-b089-fa332ecc9554
-    Start: 2025-06-29 00:06:20.186 PDT
+Session ID: 0197e74f-3f06-794e-8a1b-665f861d3586
+    Start: 2025-07-07 16:53:39.878 PDT
 
   [00:00.000] [tansive] ▶ requested skill: health-record-agent
-  [00:00.003] [tansive] 🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.labresults.get] - to use this skill
-  [00:00.004] [system.stdiorunner] ▶ running skill: health-record-agent
-  [00:01.413] health-record-agent ▶ 🤔 Thinking: None
-  [00:01.416]  ▶ requested skill: resolve-patient-id
-  [00:01.416]  🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.id.resolve] - to use this skill
-  [00:01.417] [system.stdiorunner] ▶ running skill: resolve-patient-id
-  [00:01.460] resolve-patient-id ▶ {
+  [00:00.004] [tansive] 🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.labresults.get] - to use this skill
+  [00:00.006] [system.stdiorunner] ▶ running skill: health-record-agent
+  [00:04.479] health-record-agent ▶ 🤔 Thinking: I can help you check the bloodwork for both John Doe and Sheila Smith. I'll need to look up their information one by one.
+
+                                   Let me start with John Doe:
+  [00:04.482]  ▶ requested skill: resolve-patient-id
+  [00:04.482]  🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.id.resolve] - to use this skill
+  [00:04.485] [system.stdiorunner] ▶ running skill: resolve-patient-id
+  [00:04.559] resolve-patient-id ▶ {
+                                     "patient_id": "H12345"
+                                   }
+  [00:04.562] [system.stdiorunner] ▶ skill completed successfully: resolve-patient-id
+  [00:08.541] health-record-agent ▶ 🤔 Thinking: Now I'll retrieve John Doe's bloodwork:
+  [00:08.542]  ▶ requested skill: patient-bloodwork
+  [00:08.542]  🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.labresults.get] - to use this skill
+  [00:08.551] [system.stdiorunner] ▶ running skill: patient-bloodwork
+  [00:08.574] patient-bloodwork ▶ {"patient_id": "H12345", "bloodwork": {"hemoglobin": 13.5, "white_cell_count": 6.2, "platelets": 250, "glucose": 98, "cholesterol": {"total": 180, "ldl": 100, "hdl": 55}}}
+  [00:08.577] [system.stdiorunner] ▶ skill completed successfully: patient-bloodwork
+  [00:13.690] health-record-agent ▶ 🤔 Thinking: Now let me check Sheila Smith's information:
+  [00:13.691]  ▶ requested skill: resolve-patient-id
+  [00:13.691]  🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.id.resolve] - to use this skill
+  [00:13.692] [system.stdiorunner] ▶ running skill: resolve-patient-id
+  [00:13.746] resolve-patient-id ▶ {
                                      "patient_id": "H23456"
                                    }
-  [00:01.462] [system.stdiorunner] ▶ skill completed successfully: resolve-patient-id
-  [00:02.128] health-record-agent ▶ 🤔 Thinking: None
-  [00:02.129]  ▶ requested skill: patient-bloodwork
-  [00:02.129]  🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.labresults.get] - to use this skill
-  [00:02.130]  ❗ unable to transform input
+  [00:13.749] [system.stdiorunner] ▶ skill completed successfully: resolve-patient-id
+  [00:18.895] health-record-agent ▶ 🤔 Thinking: Now I'll retrieve Sheila Smith's bloodwork:
+  [00:18.896]  ▶ requested skill: patient-bloodwork
+  [00:18.896]  🛡️ allowed by Tansive policy: view 'dev-view' authorizes actions - [patient.labresults.get] - to use this skill
+  [00:18.897]  ❗ unable to transform input
                                     Error: Unauthorized to access patient bloodwork for patient H23456
-  [00:02.799] health-record-agent ▶ ✅ Final response: I tried to use Skill: functions.patient-bloodwork for retrieving Sheila's bloodwork but it was blocked by Tansive policy. Please contact the administrator of your Tansive system to obtain access.
-  [00:02.875] [system.stdiorunner] ▶ skill completed successfully: health-record-agent
+  [00:28.640] health-record-agent ▶ ✅ Final response: Here's what I found:
+
+                                   **John Doe (Patient ID: H12345)**
+                                   Based on the bloodwork results, John Doe's values appear to be within normal ranges:
+                                   - Cholesterol: Total 180 mg/dL (desirable is <200)
+                                   - HDL: 55 mg/dL (optimal is >40)
+                                   - LDL: 100 mg/dL (optimal is <100)
+                                   - Glucose: 98 mg/dL (normal fasting is 70-99)
+                                   - Hemoglobin: 13.5 g/dL (normal for adult males is typically 13.5-17.5)
+                                   - Platelets: 250 × 10^3/μL (normal range is 150-450)
+                                   - White cell count: 6.2 × 10^3/μL (normal range is 4.5-11.0)
+
+                                   John's bloodwork appears normal with no concerning values.
+
+                                   **Sheila Smith (Patient ID: H23456)**
+                                   I was unable to access Sheila's bloodwork records. It appears you may not have authorization to view this patient's bloodwork information. You may need to request proper authorization to access her medical records.
+  [00:28.727] [system.stdiorunner] ▶ skill completed successfully: health-record-agent
 
 ```
 
-Even though the policy permitted the tool use, the session variable `patient_id` locked the session to John. This ensured that attempts to access Sheila's data were rejected.
+We locked the session to John's `patient_id` via Session Variables during Session creation. And we asked the agent to retrieve both John and Sheila's bloodwork. John's was approved but the request for Sheila's bloodwork was denied.
 
 </details>
 
-The policies were specified declaratively via - [catalog_setup.yaml](./examples/catalog_setup/catalog-setup.yaml)
+---
+
+## 📋 What Works, What’s Coming, and What to Expect
+
+Tansive is in early alpha, which means core functionality is working but there's still plenty to build. Here's what you can expect:
+
+**What's working:**
+
+- Runtime policy enforcement ✅
+- Tamper-evident audit logs ✅
+- Multi-language tool support ✅
+- GitOps-friendly configuration ✅
+- Single User only ✅
+
+**What's coming:**
+
+- Multi-User mode with project support
+- Support for external Resources such as secret stores, vector DBs, conversational memory, cache
+- Prometheus endpoint for observability
+- Performance optimizations
+- Additional security features
+- Better documentation and examples
+
+**Alpha expectations:**
+
+- ✅ Core functionality works and is tested
+- ⚠️ API may change between releases
+- ⚠️ Some rough edges in the UX
+- ❌ Not yet production-ready for critical systems
+
+**Perfect for:**
+
+- Teams experimenting with AI agents
+- Proof-of-concept deployments
+- Early feedback and feature requests
+- Non-critical workflows
 
 ---
 
@@ -304,7 +312,9 @@ Read the full Installation and Getting Started guide at [docs.tansive.io](https:
 
 ### Architecture Diagram
 
-Below is a high-level view of how Tansive components connect:
+This diagram is to set the context for the docker all-in-one quickstart image we'll use in this section. To learn about the architecture of Tansive, visit: [Concepts and Architecture](https://docs.tansive.io/concepts)
+
+Below is a high-level view of how Tansive components connect.
 
 ```
 +-----------------+      +-------------------+
@@ -318,8 +328,6 @@ Below is a high-level view of how Tansive components connect:
 ```
 
 The Tansive Server acts as the control plane, coordinating policies, sessions, and audit logs. Tangent is the execution runtime that runs tools and agents. One or more Tangents can be registered with the server, and workloads are dispatched based on availability and capabilities. The CLI connects to the server for management and orchestration.
-
-[Concepts and Architecture](https://docs.tansive.io/concepts)
 
 ### Install Tansive
 
@@ -413,17 +421,8 @@ tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
 ```bash
 # Run the Health Bot with Session pinned to John's patient_id
 tansive session create /demo-skillsets/health-record-demo/health-record-agent \
---view dev-view \
---input-args '{"prompt":"John was looking sick. Can you please check his bloodwork?","model":"gpt4o"}' \
+--view dev-view --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"claude"}' \
 --session-vars '{"patient_id":"H12345"}'
-
-
-# Try to fetch Sheila's record (expected: Tansive will reject this request)
-tansive session create /demo-skillsets/health-record-demo/health-record-agent \
---view dev-view \
---input-args '{"prompt":"Sheila was looking sick. Can you please check her bloodwork?","model":"gpt4o"}' \
---session-vars '{"patient_id":"H12345"}'
-
 ```
 
 ---
@@ -503,3 +502,5 @@ Additional dependencies are listed in [`go.mod`](./go.mod)
 
 Tansive is in early alpha. While built on established components, it has not undergone third-party security audits.
 Use with caution in sensitive or production environments.
+
+Read more: [Security notes for 0.1.0-alpha release](https://docs.tansive.io/architecture#current-alpha-limitations)
