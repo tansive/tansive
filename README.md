@@ -271,13 +271,16 @@ We locked the session to John's `patient_id` via Session Variables during Sessio
 
 Tansive is in early alpha, which means core functionality is working but there's still plenty to build. Here's what you can expect:
 
-**What's working:**
+**What you can do today:**
 
-- Runtime policy enforcement ✅
-- Tamper-evident audit logs ✅
-- Multi-language tool support ✅
-- GitOps-friendly configuration ✅
-- Single User only ✅
+You can do the following in non-production environments:
+
+✅ Deploy agents for support ticket routing, manage dev environment, or data validation workflows  
+✅ Enforce policies like "This agent can only access customer data for tier 1 support cases"  
+✅ Use session pinning to enforce data access controls like "This session can only access prospect data for the current lead"  
+✅ Write tools in Python, Node.js, Bash or any compiled language (binary invocation)  
+✅ Deploy your agent catalog and apply policies declaratively  
+✅ Single User only
 
 **What's coming:**
 
