@@ -472,7 +472,7 @@ Built with care by a solo founder passionate about infrastructure, AI, and devel
 #### Why is this Open Source?
 
 Agents can do many different types of useful things for different people, teams, companies. While I've made opinionated choices on
-architecture, I purposely built Tansive to be easily extensible. Trust and extensibility don't work behind closed doors. My goal, if Tansive proves it deserves it, is for an ecosystem to evolve and flourish around it. There are enough layers and adjacencies that Tansive and other ecosystem participants can monetize without impacting the functionality, utility, and viability of the open ecosystem.
+architecture, I purposely built Tansive to be easily extensible. Trust and extensibility don't work behind closed doors. If Tansive proves it is useful and builds a community of users, there are enough layers and adjacencies that Tansive and other ecosystem participants can monetize without impacting the functionality, utility, and viability of the open ecosystem.
 
 #### Why should we trust this project now?
 
@@ -483,10 +483,6 @@ I hope you will try Tansive in your non-production environments with real worklo
 #### I see a large initial commit. Where is this coming from?
 
 Tansive was developed privately by a single author [@anand-tan](https://github.com/anand-tan), and then moved to this repository to provide a clean starting point for open-source development. The [repositories](https://github.com/anand-tnsv) are publicly archived for historical reference.
-
-#### Is Tansive VC backed, bootstrapped?
-
-Tansive is currently founder-funded. The focus right now is on proving the usefulness of the platform and building a credible foundation.
 
 ## 🛠️ Dependencies:
 
