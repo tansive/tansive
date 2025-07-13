@@ -3,6 +3,7 @@ package test
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/tansive/tansive/internal/catalogsrv/policy"
 	"github.com/tidwall/gjson"
@@ -191,4 +192,59 @@ func GetViewDefinition(variant string) *policy.ViewDefinition {
 	}
 	vd.Rules = rules
 	return &vd
+}
+
+const mcpSkillsetDef = `
+apiVersion: 0.1.0-alpha.1
+kind: SkillSet
+metadata:
+  name: supabase-demo
+  catalog: test-catalog
+  variant: test-variant
+  path: /skillsets
+spec:
+  version: "0.1.0"
+  sources:
+    - name: supabase-mcp-server
+      runner: system.mcp.stdio
+      config:
+        version: "0.1.0"
+        args:
+          - npx
+          - -y
+          - "@supabase/mcp-server-supabase@latest"
+          # project-ref will be set in code
+        env:
+          # SUPABASE_ACCESS_TOKEN will be set in code
+  skills:
+    - name: supabase_mcp
+      source: supabase-mcp-server
+      description: Supabase MCP server
+      inputSchema:
+        type: object
+        required: []
+      outputSchema:
+        type: object
+      exportedActions:
+        - supabase.mcp.use
+      annotations:
+        mcp:tools: no-filter
+`
+
+func getMCPSkillsetDef() json.RawMessage {
+	jsonData := getJsonFromYaml(mcpSkillsetDef)
+	projectRef := os.Getenv("SUPABASE_PROJECT")
+	accessToken := os.Getenv("SUPABASE_ACCESS_TOKEN")
+
+	// Set the project-ref argument (assuming it's the 4th arg, index 3)
+	if projectRef != "" {
+		jsonData, _ = sjson.SetBytes(jsonData, "spec.sources.0.config.args.3", "--project-ref="+projectRef)
+	}
+
+	// Set the access token in env
+	if accessToken != "" {
+		jsonData, _ = sjson.SetBytes(jsonData, "spec.sources.0.config.env.SUPABASE_ACCESS_TOKEN", accessToken)
+	}
+
+	return jsonData
 }

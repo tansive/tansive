@@ -43,6 +43,7 @@ type session struct {
 	invocationIDs map[string]*policy.ViewDefinition
 	auditLogInfo  auditLogInfo
 	logger        *zerolog.Logger
+	mcpSession    mcpSession
 }
 
 // GetSessionID returns the unique identifier for this session.

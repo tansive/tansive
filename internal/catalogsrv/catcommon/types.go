@@ -125,7 +125,9 @@ const (
 )
 
 const (
-	StdioRunnerID = "system.stdiorunner"
+	StdioRunnerID     = "system.stdiorunner"
+	MCPStdioRunnerID  = "system.mcp.stdio"
+	MCPRemoteRunnerID = "system.mcp.remote"
 )
 
 type TokenType string

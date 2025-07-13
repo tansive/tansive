@@ -18,6 +18,7 @@ type auditLogInfo struct {
 	auditLogger      zerolog.Logger
 	auditLogComplete chan string
 	auditLogPubKey   []byte
+	auditLogCancel   context.CancelFunc
 }
 
 // GetAuditLogPath generates the file path for a session's audit log.

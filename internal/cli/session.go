@@ -113,7 +113,7 @@ Examples:
 			return fmt.Errorf("failed to parse response: %v", err)
 		}
 		req := &tangentcommon.SessionCreateRequest{
-			Interactive:  true,
+			SessionType:  tangentcommon.SessionTypeInteractive,
 			Code:         response.Code,
 			CodeVerifier: codeVerifier,
 		}

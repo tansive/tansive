@@ -383,6 +383,41 @@ func TestSkillSetValidation(t *testing.T) {
 			}`,
 			expectedError: false,
 		},
+		{
+			name: "valid skillset with system.mcp.stdio runner",
+			jsonInput: `{
+				"apiVersion": "0.1.0-alpha.1",
+				"kind": "SkillSet",
+				"metadata": {
+					"name": "stdio-skillset",
+					"catalog": "test-catalog",
+					"namespace": "default",
+					"variant": "default",
+					"path": "/skillsets/stdio-skillset"
+				},
+				"spec": {
+					"version": "1.0.0",
+					"sources": [
+						{
+							"name": "stdio-runner",
+							"runner": "system.mcp.stdio",
+							"config": {}
+						}
+					],
+					"skills": [
+						{
+							"name": "stdio-skill",
+							"description": "A skill using system.mcp.stdio runner",
+							"source": "stdio-runner",
+							"inputSchema": {"type": "object"},
+							"outputSchema": {"type": "object"},
+							"exportedActions": ["stdio.action"]
+						}
+					]
+				}
+			}`,
+			expectedError: false,
+		},
 	}
 
 	for _, tt := range tests {

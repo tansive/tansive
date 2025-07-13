@@ -141,6 +141,15 @@ func SetupObjects(t *testing.T, token string) {
 	t.Logf("Skillset response: %s", response.Body.String())
 	require.Equal(t, http.StatusCreated, response.Code)
 
+	// Create a SkillSet for dev variant
+	httpReq, _ = http.NewRequest("POST", "/skillsets?variant=dev", nil)
+	req = string(getMCPSkillsetDef())
+	SetRequestBodyAndHeader(t, httpReq, req)
+	httpReq.Header.Set("Authorization", "Bearer "+token)
+	response = ExecuteTestRequest(t, httpReq, nil)
+	t.Logf("Skillset response: %s", response.Body.String())
+	require.Equal(t, http.StatusCreated, response.Code)
+
 	// Create dev view with all privileges
 	httpReq, _ = http.NewRequest("POST", "/views", nil)
 	req = `
@@ -158,6 +167,11 @@ func SetupObjects(t *testing.T, token string) {
 					"intent": "Allow",
 					"actions": ["system.skillset.use","kubernetes.pods.list", "kubernetes.deployments.restart", "kubernetes.troubleshoot"],
 					"targets": ["res://skillsets/skillsets/kubernetes-demo"]
+				},
+				{
+					"intent": "Allow",
+					"actions": ["system.skillset.use", "supabase.mcp.use"],
+					"targets": ["res://skillsets/skillsets/supabase-demo"]
 				}]
 			}
 		}`

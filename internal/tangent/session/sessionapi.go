@@ -37,32 +37,64 @@ func createSession(r *http.Request) (*httpx.Response, error) {
 		return nil, httpx.ErrInvalidRequest("failed to parse request body: " + err.Error())
 	}
 
-	if !req.Interactive {
-		return nil, httpx.ErrInvalidRequest("only interactive sessions are supported")
-	}
+	var rsp *httpx.Response
 
-	session, err := handleInteractiveSession(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	rsp := &httpx.Response{
-		StatusCode:  http.StatusOK,
-		ContentType: "application/x-ndjson",
-		Chunked:     true,
-		WriteChunks: func(w http.ResponseWriter) error {
-			ctx := log.Ctx(ctx).With().Str("session_id", session.id.String()).Logger().WithContext(ctx)
-			return runSession(ctx, w, session)
-		},
+	switch req.SessionType {
+	case tangentcommon.SessionTypeInteractive:
+		return processInteractiveSession(ctx, req)
+	case tangentcommon.SessionTypeMCPProxy:
+		return processMCPProxySession(ctx, req)
 	}
 
 	return rsp, nil
 }
 
-// handleInteractiveSession creates an interactive session from the request.
+// processMCPProxySession creates an MCP proxy session from the request.
+func processMCPProxySession(ctx context.Context, req *tangentcommon.SessionCreateRequest) (rsp *httpx.Response, apperr apperrors.Error) {
+	session, err := resolveSession(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	url, err := runMCPProxySession(ctx, session)
+	if err != nil {
+		return nil, err
+	}
+
+	type MCPProxyRsp struct {
+		URL string `json:"url"`
+	}
+
+	rsp = &httpx.Response{
+		StatusCode: http.StatusOK,
+		Response: &MCPProxyRsp{
+			URL: url,
+		},
+	}
+	return rsp, nil
+}
+
+// processInteractiveSession creates an interactive session from the request.
+func processInteractiveSession(ctx context.Context, req *tangentcommon.SessionCreateRequest) (rsp *httpx.Response, apperr apperrors.Error) {
+	session, err := resolveSession(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	rsp = &httpx.Response{
+		StatusCode:  http.StatusOK,
+		ContentType: "application/x-ndjson",
+		Chunked:     true,
+		WriteChunks: func(w http.ResponseWriter) error {
+			ctx := log.Ctx(ctx).With().Str("session_id", session.id.String()).Logger().WithContext(ctx)
+			return runInteractiveSession(ctx, w, session)
+		},
+	}
+	return rsp, nil
+}
+
+// resolveSession creates an interactive session from the request.
 // Retrieves execution state from the catalog server and creates an active session.
 // Returns the created session and any error encountered during creation.
-func handleInteractiveSession(ctx context.Context, req *tangentcommon.SessionCreateRequest) (*session, apperrors.Error) {
+func resolveSession(ctx context.Context, req *tangentcommon.SessionCreateRequest) (*session, apperrors.Error) {
 	client := getHTTPClient(&clientConfig{
 		serverURL: config.Config().TansiveServer.GetURL(),
 	})
@@ -168,10 +200,10 @@ func createActiveSession(ctx context.Context, executionState *srvsession.Executi
 	return session, nil
 }
 
-// runSession executes a session and streams results to the HTTP response.
+// runInteractiveSession executes a session and streams results to the HTTP response.
 // Initializes audit logging, subscribes to event streams, and runs the session.
 // Returns any error encountered during session execution.
-func runSession(ctx context.Context, w http.ResponseWriter, session *session) (apperr apperrors.Error) {
+func runInteractiveSession(ctx context.Context, w http.ResponseWriter, session *session) (apperr apperrors.Error) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		log.Ctx(ctx).Error().Msg("response writer does not support flushing")
@@ -247,4 +279,37 @@ func runSession(ctx context.Context, w http.ResponseWriter, session *session) (a
 	log.Ctx(ctx).Info().Msg("session completed")
 
 	return nil
+}
+
+func runMCPProxySession(ctx context.Context, session *session) (url string, apperr apperrors.Error) {
+	auditLogCtx, cancelAuditLog := context.WithCancel(context.Background())
+	session.auditLogInfo.auditLogCancel = cancelAuditLog
+	defer func() {
+		if apperr != nil {
+			session.auditLogInfo.auditLogCancel()
+		}
+	}()
+
+	apperr = InitAuditLog(auditLogCtx, session)
+	if apperr != nil {
+		log.Ctx(ctx).Error().Err(apperr).Msg("unable to initialize audit log")
+	}
+
+	// Run will block until the session is complete
+	session.auditLogInfo.auditLogger.Info().
+		Str("event", "session_start").
+		Any("session_variables", session.context.SessionVariables).
+		Msg("starting session")
+
+	log.Ctx(ctx).Info().Str("skill", session.context.Skill).Msg("running session")
+
+	url, apperr = session.RunMCPProxy(ctx, "", session.context.Skill, session.context.InputArgs)
+	if apperr != nil {
+		log.Ctx(ctx).Error().Err(apperr).Msg("session failed")
+		session.auditLogInfo.auditLogger.Error().Str("event", "session_end").Err(apperr).Msg("session failed")
+		return "", apperr
+	}
+
+	log.Ctx(ctx).Info().Msg("session started")
+	return url, nil
 }
