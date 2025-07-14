@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -11,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	srvsession "github.com/tansive/tansive/internal/catalogsrv/session"
 	"github.com/tansive/tansive/internal/common/httpclient"
@@ -88,8 +88,11 @@ Examples:
 			return fmt.Errorf("failed to marshal request body: %v", err)
 		}
 
-		// Generate code verifier (UUID) and challenge
-		codeVerifier := uuid.New().String()
+		// Generate code verifier (high-entropy random) and challenge
+		codeVerifier, err := generateCodeVerifier()
+		if err != nil {
+			return fmt.Errorf("failed to generate code verifier: %v", err)
+		}
 		hashed := sha256.Sum256([]byte(codeVerifier))
 		codeChallenge := base64.RawURLEncoding.EncodeToString(hashed[:])
 
@@ -373,8 +376,11 @@ tansive session stop 123e4567-e89b-12d3-a456-426614174000 -j`,
 		sessionID := args[0]
 		client := httpclient.NewClient(GetConfig())
 
-		// Generate code verifier (UUID) and challenge
-		codeVerifier := uuid.New().String()
+		// Generate code verifier (high-entropy random) and challenge
+		codeVerifier, err := generateCodeVerifier()
+		if err != nil {
+			return fmt.Errorf("failed to generate code verifier: %v", err)
+		}
 		hashed := sha256.Sum256([]byte(codeVerifier))
 		codeChallenge := base64.RawURLEncoding.EncodeToString(hashed[:])
 
@@ -450,6 +456,16 @@ func formatTimestampInLocalTimezone(t time.Time) string {
 		return t.Format("2006-01-02 15:04:05 MST")
 	}
 	return t.Local().Format("2006-01-02 15:04:05 MST")
+}
+
+// generateCodeVerifier generates a high-entropy cryptographically random code verifier for PKCE
+func generateCodeVerifier() (string, error) {
+	b := make([]byte, 32) // 32 bytes = 256 bits
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
 var (
