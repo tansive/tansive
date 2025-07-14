@@ -110,7 +110,7 @@ func (s *session) Run(ctx context.Context, invokerID string, skillName string, i
 		Any("actions", actions).
 		Msg("allowed by policy")
 
-	transformApplied, inputArgs, err := s.TransformInputForSkill(ctx, skillName, inputArgs)
+	transformApplied, inputArgs, err := s.TransformInputForSkill(ctx, skillName, inputArgs, invocationID)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("unable to transform input")
 		log.Ctx(ctx).Error().Err(err).Msg("unable to transform input")
@@ -187,7 +187,7 @@ func (s *session) ValidateRunPolicy(ctx context.Context, invokerID string, skill
 
 // TransformInputForSkill applies JavaScript transformations to input arguments if defined.
 // Returns whether transformation was applied, the transformed arguments, and any error.
-func (s *session) TransformInputForSkill(ctx context.Context, skillName string, inputArgs map[string]any) (transformApplied bool, retArgs map[string]any, retErr apperrors.Error) {
+func (s *session) TransformInputForSkill(ctx context.Context, skillName string, inputArgs map[string]any, invokerID string) (transformApplied bool, retArgs map[string]any, retErr apperrors.Error) {
 	skill, err := s.resolveSkill(skillName)
 	if err != nil {
 		return false, inputArgs, err
@@ -203,7 +203,8 @@ func (s *session) TransformInputForSkill(ctx context.Context, skillName string, 
 			return false, inputArgs, err
 		}
 		inputArgs, err = jsFunc.Run(ctx, s.context.SessionVariables, inputArgs, jsruntime.Options{
-			Timeout: 25 * time.Millisecond,
+			Timeout:      1000 * time.Millisecond,
+			SkillInvoker: s.skillInvoker(ctx, invokerID),
 		})
 		if err != nil {
 			return false, inputArgs, err
@@ -211,6 +212,31 @@ func (s *session) TransformInputForSkill(ctx context.Context, skillName string, 
 		return true, inputArgs, nil
 	}
 	return false, inputArgs, nil
+}
+
+func (s *session) skillInvoker(ctx context.Context, invokerID string) func(skillName string, inputArgs map[string]any) ([]byte, apperrors.Error) {
+	return func(skillName string, inputArgs map[string]any) ([]byte, apperrors.Error) {
+		// Create writers to capture command outputs
+		outWriter := tangentcommon.NewBufferedWriter()
+		errWriter := tangentcommon.NewBufferedWriter()
+
+		apperr := s.Run(ctx, invokerID, skillName, inputArgs, &tangentcommon.IOWriters{
+			Out: outWriter,
+			Err: errWriter,
+		})
+
+		if apperr != nil {
+			return nil, apperr
+		}
+
+		if outWriter.Len() > 0 {
+			return outWriter.Bytes(), nil
+		}
+		if errWriter.Len() > 0 {
+			return errWriter.Bytes(), nil
+		}
+		return nil, nil
+	}
 }
 
 // ValidateInputForSkill validates input arguments against the skill's schema.

@@ -1,3 +1,4 @@
+// Package-level error variables for mcpservice, representing handler, request, and tool listing errors for the MCP service.
 package mcpservice
 
 import (

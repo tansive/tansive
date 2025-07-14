@@ -2,7 +2,7 @@ package mcpstdiorunner
 
 import "github.com/tansive/tansive/internal/common/apperrors"
 
-// Error definitions for the package.
+// Package-level error variables for mcpstdiorunner, representing configuration, initialization, and tool invocation errors.
 // All errors are derived from ErrMCPClientRunnerError.
 var (
 	// ErrMCPClientRunnerError is the base error for the package.

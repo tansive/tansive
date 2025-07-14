@@ -20,7 +20,16 @@ func TestMCPStdioRunner_FetchTools(t *testing.T) {
 	if os.Getenv("SUPABASE_PROJECT") == "" {
 		t.Skip("SUPABASE_PROJECT not set; skipping integration test")
 	}
-
+	/*
+		command npx
+		args [-y @supabase/mcp-server-supabase@latest --project-ref=xikujfynyknkfbopgewg]
+		env [SUPABASE_ACCESS_TOKEN=sbp_33325c88de358fe86432893e00fc7f2831ba7073]
+	*/
+	/*
+		command npx
+		args [-y @supabase/mcp-server-supabase@latest --project-ref=xikujfynyknkfbopgewg]
+		env [SUPABASE_ACCESS_TOKEN=sbp_33325c88de358fe86432893e00fc7f2831ba7073]
+	*/
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 

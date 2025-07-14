@@ -20,32 +20,38 @@ import (
 	"github.com/tansive/tansive/internal/tangent/config"
 )
 
+// ListToolsFunc defines a function type for listing available MCP tools.
 type ListToolsFunc func(ctx context.Context) ([]mcp.Tool, error)
+
+// CallToolFunc defines a function type for invoking an MCP tool.
 type CallToolFunc func(ctx context.Context, tool mcp.Tool, params mcp.CallToolParams) (*mcp.CallToolResult, error)
+
+// FilterToolsFunc defines a function type for filtering MCP tools.
 type FilterToolsFunc func(ctx context.Context, tools []mcp.Tool) []mcp.Tool
 
-// MCPHandler is a generic interface for MCP session handlers.
+// MCPHandler is a generic interface for MCP session handlers, providing tool listing, invocation, and filtering.
 type MCPHandler interface {
 	MCPListTools(ctx context.Context) ([]mcp.Tool, error)
 	MCPCallTool(ctx context.Context, tool mcp.Tool, params mcp.CallToolParams) (*mcp.CallToolResult, error)
 	MCPFilterTools(ctx context.Context, tools []mcp.Tool) []mcp.Tool
 }
 
+// MCPEndpoint represents a registered MCP session endpoint, associating an MCP server with a handler.
 type MCPEndpoint struct {
-	server  *server.MCPServer
-	handler MCPHandler
+	server  *server.MCPServer // Underlying MCP server instance
+	handler MCPHandler        // Handler for tool operations
 }
 
-// MCPServer provides the HTTP server for the MCP service.
+// MCPServer provides the HTTP server for the MCP service, managing session routing and handler registration.
 type MCPServer struct {
 	Router   *chi.Mux // HTTP router for request handling
-	sessions sync.Map // map[string]MCPHandler
+	sessions sync.Map // Concurrent map of session URIs to handlers
 }
 
 var s *MCPServer
 
-// CreateNewMCPServer creates a new MCPServer instance.
-func CreateNewMCPServer() (*MCPServer, error) {
+// CreateMCPService creates a new MCPServer instance.
+func CreateMCPService() (*MCPServer, error) {
 	if s != nil {
 		return s, nil
 	}
@@ -60,7 +66,7 @@ func (s *MCPServer) mountHandlers() {
 	s.Router.Use(middleware.RequestLogger)
 	s.Router.Use(middleware.PanicHandler)
 	s.Router.Route("/session/{sessionRandomURI}/mcp", func(r chi.Router) {
-		r.Get("/", s.handleMCP)
+		r.Post("/", s.handleMCP)
 	})
 }
 
@@ -97,6 +103,9 @@ func (s *MCPServer) ListenAndServe() error {
 
 // NewMCPSession registers a new MCP session handler and returns the random URI.
 func NewMCPSession(ctx context.Context, handler MCPHandler) (string, string, apperrors.Error) {
+	if s == nil {
+		return "", "", ErrMCPServiceError.Msg("mcp service not initialized")
+	}
 	random := generateRandomString(64)
 	if handler == nil {
 		return "", "", ErrMCPHandler

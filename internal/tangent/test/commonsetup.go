@@ -170,7 +170,7 @@ func SetupObjects(t *testing.T, token string) {
 				},
 				{
 					"intent": "Allow",
-					"actions": ["system.skillset.use", "supabase.mcp.use"],
+					"actions": ["system.skillset.use", "supabase.mcp.use", "supabase.tables.list", "supabase.sql.query"],
 					"targets": ["res://skillsets/skillsets/supabase-demo"]
 				}]
 			}

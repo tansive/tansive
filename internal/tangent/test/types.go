@@ -165,8 +165,13 @@ const devView = `
       "intent": "Allow",
       "actions": ["system.skillset.use","kubernetes.pods.list", "kubernetes.deployments.restart", "kubernetes.troubleshoot"],
       "targets": ["res://skillsets/skillsets/kubernetes-demo"]
+    },
+    {
+      "intent": "Allow",
+      "actions": ["system.skillset.use", "supabase.mcp.use", "supabase.tables.list", "supabase.sql.query"],
+      "targets": ["res://skillsets/skillsets/supabase-demo"]
     }]
-  }
+	}
 }`
 
 func GetView(name string) json.RawMessage {
@@ -209,14 +214,100 @@ spec:
       runner: system.mcp.stdio
       config:
         version: "0.1.0"
+        command: npx
         args:
-          - npx
           - -y
           - "@supabase/mcp-server-supabase@latest"
           # project-ref will be set in code
         env:
           # SUPABASE_ACCESS_TOKEN will be set in code
+    - name: sql-validator
+      runner: system.stdiorunner
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "python"
+        script: "validate_sql.py"
+        security:
+          type: default
+  context:
+    - name: sql-permissions
+      schema:
+        type: object
+        properties:
+          allow:
+            type: object
+            additionalProperties:
+              type: array
+              items:
+                type: string
+          deny:
+            type: object
+            additionalProperties:
+              type: array
+              items:
+                type: string
+        required:
+          - allow
+          - deny
+      value:
+        allow:
+          select:
+            - support_tickets
+            - support_messages
+          update:
+            - support_messages
+        deny:
+          all:
+            - integration_tokens
+      annotations: {}
   skills:
+    - name: validate_sql
+      source: sql-validator
+      description: Validate SQL input
+      inputSchema:
+        type: object
+        required: []
+      outputSchema:
+        type: object
+      exportedActions:
+        - supabase.mcp.use
+    - name: list_tables
+      source: supabase-mcp-server
+      description: List tables in the database
+      inputSchema:
+        type: object
+        required: []
+      outputSchema:
+        type: object
+      exportedActions:
+        - supabase.tables.list
+    - name: execute_sql
+      source: supabase-mcp-server
+      description: Execute SQL query
+      inputSchema:
+        type: object
+        required: []
+      outputSchema:
+        type: object
+      transform: |
+        function(session, input) {
+          let validationInput = {
+            sql: input.query
+          }
+          let ret = SkillService.invokeSkill("validate_sql", validationInput);
+          // if ret is not an object, throw an error
+          if (typeof ret !== "object") {
+            throw new Error("unable to validate input");
+          }
+          if(!ret.allowed) {
+            throw new Error(ret.reason);
+          }
+          console.log("input validated");
+          console.log(ret);
+          return input;
+        }
+      exportedActions:
+        - supabase.sql.query
     - name: supabase_mcp
       source: supabase-mcp-server
       description: Supabase MCP server
@@ -228,7 +319,7 @@ spec:
       exportedActions:
         - supabase.mcp.use
       annotations:
-        mcp:tools: no-filter
+        mcp:tools: filter-tools
 `
 
 func getMCPSkillsetDef() json.RawMessage {
@@ -247,4 +338,15 @@ func getMCPSkillsetDef() json.RawMessage {
 	}
 
 	return jsonData
+}
+
+func MCPSkillsetPath() string {
+	jsonData := getJsonFromYaml(mcpSkillsetDef)
+	name := gjson.Get(string(jsonData), "metadata.name").String()
+	path := gjson.Get(string(jsonData), "metadata.path").String()
+	return fmt.Sprintf("%s/%s", path, name)
+}
+
+func MCPSkillsetAgent() string {
+	return "supabase_mcp"
 }
