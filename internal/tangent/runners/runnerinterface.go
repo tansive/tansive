@@ -35,6 +35,9 @@ type Runner interface {
 
 	// Fetch tools
 	FetchTools(ctx context.Context) ([]*api.LLMTool, apperrors.Error)
+
+	// Stop stops the runner
+	Stop(ctx context.Context)
 }
 
 // NewRunner creates a new runner instance based on the runner definition.

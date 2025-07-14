@@ -16,6 +16,12 @@ import (
 	"github.com/tansive/tansive/pkg/api"
 )
 
+const (
+	FilterNoFilter = "no-filter"
+	FilterOnly     = "allow-only"
+	FilterOverlay  = "overlay"
+)
+
 // mcpSession holds state and configuration for an active MCP proxy session, including runner, source, and session-specific identifiers.
 type mcpSession struct {
 	source       string         // Skill source identifier for filtering and validation
@@ -158,10 +164,8 @@ func (s *session) startMCPProxySession(ctx context.Context, invokerID string, sk
 	if err != nil {
 		return "", err
 	}
-	s.mcpSession = mcpSession{
-		source: skill.Source,
-		runner: runner,
-	}
+	s.mcpSession.runner = runner
+	s.mcpSession.source = skill.Source
 
 	url, random, err := mcpservice.NewMCPSession(ctx, s)
 	if err != nil {
@@ -184,7 +188,7 @@ func (s *session) MCPFilterTools(ctx context.Context, tools []mcp.Tool) []mcp.To
 	if !ok {
 		return tools
 	}
-	if mcpfilter == "no-filter" {
+	if mcpfilter == FilterNoFilter || mcpfilter == FilterOverlay {
 		return tools
 	}
 
@@ -246,93 +250,116 @@ func (s *session) MCPCallTool(ctx context.Context, tool mcp.Tool, params mcp.Cal
 		Any("input_args", inputArgs).
 		Msg("requested skill")
 
-	if s.mcpSession.filter != "no-filter" {
+	if s.mcpSession.filter != FilterNoFilter {
 		skill, err := s.resolveSkill(tool.Name)
-		if err != nil {
+		if err != nil && s.mcpSession.filter == FilterOnly {
 			return nil, err
 		}
+		if err == nil {
+			if skill.Source != s.mcpSession.source {
+				return nil, ErrSkillNotMCP.Msg("skill is not from the same MCP server")
+			}
 
-		if skill.Source != s.mcpSession.source {
-			return nil, ErrSkillNotMCP.Msg("skill is not from the same MCP server")
-		}
+			isAllowed, basis, actions, err := s.ValidateRunPolicy(ctx, "", skill.Name)
+			if err != nil {
+				s.logger.Error().Err(err).Msg("unable to validate run policy")
+				return nil, err
+			}
 
-		isAllowed, basis, actions, err := s.ValidateRunPolicy(ctx, "", skill.Name)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("unable to validate run policy")
-			return nil, err
-		}
+			if !isAllowed {
+				msg := fmt.Sprintf("blocked by Tansive policy: view '%s' does not authorize any of required actions - %v - to use this skill", s.context.View, actions)
+				s.logger.Error().Str("policy_decision", "true").Msg(msg)
+				log.Ctx(ctx).Error().Str("policy_decision", "true").Msg(msg)
+				s.auditLogInfo.auditLogger.Error().
+					Str("event", "policy_decision").
+					Str("decision", "blocked").
+					Str("invoker_id", invokerID).
+					Str("invocation_id", invocationID).
+					Str("view", s.context.View).
+					Any("basis", basis).
+					Str("skill", skill.Name).
+					Any("actions", actions).
+					Msg("blocked by policy")
 
-		if !isAllowed {
-			msg := fmt.Sprintf("blocked by Tansive policy: view '%s' does not authorize any of required actions - %v - to use this skill", s.context.View, actions)
-			s.logger.Error().Str("policy_decision", "true").Msg(msg)
-			log.Ctx(ctx).Error().Str("policy_decision", "true").Msg(msg)
-			s.auditLogInfo.auditLogger.Error().
+				result := &mcp.CallToolResult{
+					IsError: true,
+					Content: []mcp.Content{
+						mcp.TextContent{
+							Type: "text",
+							Text: msg,
+						},
+					},
+				}
+				return result, nil
+			}
+
+			s.auditLogInfo.auditLogger.Info().
 				Str("event", "policy_decision").
-				Str("decision", "blocked").
+				Str("decision", "allowed").
 				Str("invoker_id", invokerID).
 				Str("invocation_id", invocationID).
 				Str("view", s.context.View).
 				Any("basis", basis).
 				Str("skill", skill.Name).
 				Any("actions", actions).
-				Msg("blocked by policy")
+				Msg("allowed by policy")
 
-			result := &mcp.CallToolResult{
-				IsError: true,
-				Content: []mcp.Content{
-					mcp.TextContent{
-						Type: "text",
-						Text: msg,
+			var transformApplied bool
+			transformApplied, inputArgs, err = s.TransformInputForSkill(ctx, skill.Name, inputArgs, invocationID)
+			if err != nil {
+				s.logger.Error().Err(err).Msg("unable to transform input")
+				log.Ctx(ctx).Error().Err(err).Msg("unable to transform input")
+				s.auditLogInfo.auditLogger.Error().
+					Str("event", "skill_input_transformed").
+					Str("status", "failed").
+					Str("invocation_id", invocationID).
+					Err(err).
+					Str("skill", skill.Name).
+					Msg("input transformed")
+				result := &mcp.CallToolResult{
+					IsError: true,
+					Content: []mcp.Content{
+						mcp.TextContent{
+							Type: "text",
+							Text: "Blocked by Tansive, policy-driven, secure AI Agents: " + err.Error(),
+						},
 					},
-				},
+				}
+				return result, nil
 			}
-			return result, nil
-		}
 
+			if transformApplied {
+				s.auditLogInfo.auditLogger.Info().
+					Str("event", "skill_input_transformed").
+					Str("status", "success").
+					Str("invocation_id", invocationID).
+					Str("skill", skill.Name).
+					Any("input_args", inputArgs).
+					Msg("input transformed")
+			}
+		} else {
+			s.auditLogInfo.auditLogger.Info().
+				Str("event", "policy_decision").
+				Str("decision", "allowed").
+				Str("invoker_id", invokerID).
+				Str("invocation_id", invocationID).
+				Str("view", s.context.View).
+				Any("basis", "overlay, no policy filter").
+				Str("skill", tool.Name).
+				Any("actions", "none").
+				Msg("allowed by policy")
+		}
+	} else {
 		s.auditLogInfo.auditLogger.Info().
 			Str("event", "policy_decision").
 			Str("decision", "allowed").
 			Str("invoker_id", invokerID).
 			Str("invocation_id", invocationID).
 			Str("view", s.context.View).
-			Any("basis", basis).
-			Str("skill", skill.Name).
-			Any("actions", actions).
+			Any("basis", "no-filter, no policy filter").
+			Str("skill", tool.Name).
+			Any("actions", "none").
 			Msg("allowed by policy")
-
-		var transformApplied bool
-		transformApplied, inputArgs, err = s.TransformInputForSkill(ctx, skill.Name, inputArgs, invocationID)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("unable to transform input")
-			log.Ctx(ctx).Error().Err(err).Msg("unable to transform input")
-			s.auditLogInfo.auditLogger.Error().
-				Str("event", "skill_input_transformed").
-				Str("status", "failed").
-				Str("invocation_id", s.mcpSession.invocationID).
-				Err(err).
-				Str("skill", skill.Name).
-				Msg("input transformed")
-			result := &mcp.CallToolResult{
-				IsError: true,
-				Content: []mcp.Content{
-					mcp.TextContent{
-						Type: "text",
-						Text: err.Error(),
-					},
-				},
-			}
-			return result, nil
-		}
-
-		if transformApplied {
-			s.auditLogInfo.auditLogger.Info().
-				Str("event", "skill_input_transformed").
-				Str("status", "success").
-				Str("invocation_id", invocationID).
-				Str("skill", skill.Name).
-				Any("input_args", inputArgs).
-				Msg("input transformed")
-		}
 	}
 
 	result, err := s.mcpSession.runner.RunMCP(ctx, &api.SkillInputArgs{

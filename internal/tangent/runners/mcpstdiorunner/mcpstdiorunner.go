@@ -172,3 +172,10 @@ func (r *runner) FetchTools(ctx context.Context) ([]*api.LLMTool, apperrors.Erro
 	}
 	return tools, nil
 }
+
+// Stop stops the runner
+func (r *runner) Stop(ctx context.Context) {
+	r.clientLock.Lock()
+	defer r.clientLock.Unlock()
+	r.client.Close()
+}

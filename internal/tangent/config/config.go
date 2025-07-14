@@ -46,6 +46,14 @@ func (t *TansiveServerConfig) GetURL() string {
 	return t.URL
 }
 
+// MCPConfig holds MCP server related configuration
+type MCPConfig struct {
+	Port       string `toml:"port"`        // MCP server port
+	SupportTLS bool   `toml:"support_tls"` // Whether to support TLS
+	TLSCertPEM []byte `toml:"-"`           // PEM encoded TLS certificate
+	TLSKeyPEM  []byte `toml:"-"`           // PEM encoded TLS key
+}
+
 // ConfigParam holds all configuration parameters for the tangent service
 type ConfigParam struct {
 	// Configuration version
@@ -68,6 +76,9 @@ type ConfigParam struct {
 
 	// Tansive server configuration
 	TansiveServer TansiveServerConfig `toml:"tansive_server"`
+
+	// MCP configuration
+	MCP MCPConfig `toml:"mcp"`
 }
 
 var cfg *ConfigParam
@@ -144,6 +155,11 @@ func ValidateConfig(cfg *ConfigParam) error {
 	// Tansive server validation
 	if cfg.TansiveServer.URL == "" {
 		return fmt.Errorf("tansive_server.url is required")
+	}
+
+	// MCP configuration validation
+	if cfg.MCP.Port == "" {
+		cfg.MCP.Port = "8627"
 	}
 
 	if cfg.WorkingDir == "" {

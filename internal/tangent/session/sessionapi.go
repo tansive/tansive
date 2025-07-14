@@ -13,6 +13,7 @@ import (
 	"github.com/tansive/tansive/internal/common/apperrors"
 	"github.com/tansive/tansive/internal/common/httpclient"
 	"github.com/tansive/tansive/internal/common/httpx"
+	"github.com/tansive/tansive/internal/common/uuid"
 	"github.com/tansive/tansive/internal/tangent/config"
 	"github.com/tansive/tansive/internal/tangent/tangentcommon"
 )
@@ -49,6 +50,72 @@ func createSession(r *http.Request) (*httpx.Response, error) {
 	return rsp, nil
 }
 
+// This flow is temporary until we support a full Tangent-Server SSE connection
+func stopSession(r *http.Request) (*httpx.Response, error) {
+	ctx := r.Context()
+
+	if r.Body == nil {
+		return nil, httpx.ErrInvalidRequest("request body is required")
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, httpx.ErrUnableToReadRequest()
+	}
+
+	// We are reusing this
+	req := &tangentcommon.SessionCreateRequest{}
+	if err := json.Unmarshal(body, req); err != nil {
+		return nil, httpx.ErrInvalidRequest("failed to parse request body: " + err.Error())
+	}
+
+	var rsp *httpx.Response
+
+	client := getHTTPClient(&clientConfig{
+		serverURL: config.Config().TansiveServer.GetURL(),
+	})
+
+	opts := httpclient.RequestOptions{
+		Method: http.MethodPost,
+		Path:   "sessions/stop",
+		QueryParams: map[string]string{
+			"code":          req.Code,
+			"code_verifier": req.CodeVerifier,
+		},
+	}
+
+	body, _, err = client.DoRequest(opts)
+	if err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("unable to stop session")
+		return nil, ErrFailedRequestToTansiveServer.Msg("unable to stop session: " + err.Error())
+	}
+
+	stopRsp := map[string]any{}
+	if err := json.Unmarshal(body, &stopRsp); err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("unable to parse stop response")
+		return nil, ErrFailedRequestToTansiveServer.Msg("unable to parse stop response: " + err.Error())
+	}
+
+	sessionIDStr := stopRsp["sessionID"].(string)
+	sessionID, err := uuid.Parse(sessionIDStr)
+	if err != nil || sessionID == uuid.Nil {
+		log.Ctx(ctx).Error().Err(err).Msg("unable to parse session ID")
+		return nil, ErrFailedRequestToTansiveServer.Msg("unable to parse session ID: " + err.Error())
+	}
+
+	if err := processStopSession(ctx, sessionID); err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("unable to stop session")
+		return nil, ErrFailedRequestToTansiveServer.Msg("unable to stop session: " + err.Error())
+	}
+
+	rsp = &httpx.Response{
+		StatusCode: http.StatusOK,
+		Response:   nil,
+	}
+
+	return rsp, nil
+}
+
 // processMCPProxySession creates an MCP proxy session from the request.
 func processMCPProxySession(ctx context.Context, req *tangentcommon.SessionCreateRequest) (rsp *httpx.Response, apperr apperrors.Error) {
 	session, err := resolveSession(ctx, req)
@@ -60,15 +127,10 @@ func processMCPProxySession(ctx context.Context, req *tangentcommon.SessionCreat
 		return nil, err
 	}
 
-	type MCPProxyRsp struct {
-		URL string `json:"url"`
-	}
-
 	rsp = &httpx.Response{
-		StatusCode: http.StatusOK,
-		Response: &MCPProxyRsp{
-			URL: url,
-		},
+		StatusCode: http.StatusCreated,
+		Location:   url,
+		Response:   nil,
 	}
 	return rsp, nil
 }
@@ -214,6 +276,7 @@ func runInteractiveSession(ctx context.Context, w http.ResponseWriter, session *
 
 	auditLogCtx, cancelAuditLog := context.WithCancel(context.Background())
 	defer cancelAuditLog()
+	session.auditLogInfo.auditLogCancel = cancelAuditLog
 
 	apperr = InitAuditLog(auditLogCtx, session)
 	if apperr != nil {
@@ -312,4 +375,14 @@ func runMCPProxySession(ctx context.Context, session *session) (url string, appe
 
 	log.Ctx(ctx).Info().Msg("session started")
 	return url, nil
+}
+
+func processStopSession(ctx context.Context, sessionID uuid.UUID) apperrors.Error {
+	session, err := ActiveSessionManager().GetSession(sessionID)
+	if err != nil {
+		return err
+	}
+	session.Stop(ctx, nil)
+	ActiveSessionManager().DeleteSession(sessionID)
+	return nil
 }

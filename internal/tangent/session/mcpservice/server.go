@@ -129,6 +129,15 @@ func NewMCPSession(ctx context.Context, handler MCPHandler) (string, string, app
 	return url, random, nil
 }
 
+func StopMCPSession(ctx context.Context, random string) apperrors.Error {
+	if s == nil {
+		return ErrMCPServiceError.Msg("mcp service not initialized")
+	}
+	// There doesn't seem to be a need to stop the server.
+	s.sessions.Delete(random)
+	return nil
+}
+
 func loadTools(ctx context.Context, srv *server.MCPServer, handler MCPHandler) apperrors.Error {
 	if handler == nil || srv == nil {
 		log.Ctx(ctx).Error().Msg("listTools or srv is nil")

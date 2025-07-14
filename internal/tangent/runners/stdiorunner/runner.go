@@ -348,3 +348,8 @@ func (r *runner) normalizeLineEndings(source, target string) apperrors.Error {
 
 	return nil
 }
+
+// Stop stops the runner
+func (r *runner) Stop(ctx context.Context) {
+	// TODO: Implement
+}

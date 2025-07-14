@@ -24,6 +24,7 @@ import (
 	"github.com/tansive/tansive/internal/tangent/config"
 	"github.com/tansive/tansive/internal/tangent/eventlogger"
 	"github.com/tansive/tansive/internal/tangent/runners"
+	"github.com/tansive/tansive/internal/tangent/session/mcpservice"
 	"github.com/tansive/tansive/internal/tangent/session/toolgraph"
 	"github.com/tansive/tansive/internal/tangent/tangentcommon"
 	"github.com/tansive/tansive/pkg/api"
@@ -33,18 +34,19 @@ import (
 // session represents an active execution session for skill invocation.
 // It manages the session state, skill execution, policy validation, and audit logging.
 type session struct {
-	id            uuid.UUID
-	context       *ServerContext
-	skillSet      catalogmanager.SkillSetManager
-	viewDef       *policy.ViewDefinition
-	token         string
-	tokenExpiry   time.Time
-	callGraph     *toolgraph.CallGraph
-	invocationIDs map[string]*policy.ViewDefinition
-	auditLogInfo  auditLogInfo
-	logger        *zerolog.Logger
-	mcpSession    mcpSession
-	sessionType   tangentcommon.SessionType
+	id             uuid.UUID
+	context        *ServerContext
+	skillSet       catalogmanager.SkillSetManager
+	viewDef        *policy.ViewDefinition
+	token          string
+	tokenExpiry    time.Time
+	callGraph      *toolgraph.CallGraph
+	invocationIDs  map[string]*policy.ViewDefinition
+	auditLogInfo   auditLogInfo
+	logger         *zerolog.Logger
+	mcpSession     mcpSession
+	sessionType    tangentcommon.SessionType
+	skillCancelers []context.CancelFunc
 }
 
 // GetSessionID returns the unique identifier for this session.
@@ -305,6 +307,7 @@ func (s *session) runSkill(ctx context.Context, invokerID, invocationID string, 
 
 	childCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	s.skillCancelers = append(s.skillCancelers, cancel)
 
 	resultChan := make(chan apperrors.Error, 1)
 
@@ -607,5 +610,20 @@ func (s *session) Finalize(ctx context.Context, apperr apperrors.Error) apperror
 		return ErrFailedRequestToTansiveServer.Msg(err.Error())
 	}
 
+	return nil
+}
+
+func (s *session) Stop(ctx context.Context, apperr apperrors.Error) apperrors.Error {
+	if s.mcpSession.runner != nil {
+		s.mcpSession.runner.Stop(ctx)
+	}
+	if s.mcpSession.random != "" {
+		mcpservice.StopMCPSession(ctx, s.mcpSession.random)
+	}
+	for _, cancel := range s.skillCancelers {
+		cancel()
+	}
+	s.auditLogInfo.auditLogCancel()
+	s.Finalize(ctx, apperr)
 	return nil
 }
