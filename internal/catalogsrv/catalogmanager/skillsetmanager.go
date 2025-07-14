@@ -401,6 +401,10 @@ func (sm *skillSetManager) GetRunnerTypes() []catcommon.RunnerID {
 	return runnerTypes
 }
 
+func (sm *skillSetManager) GetSources() []SkillSetSource {
+	return sm.skillSet.Spec.Sources
+}
+
 // DeleteSkillSet deletes a skillset from the database.
 func DeleteSkillSet(ctx context.Context, m *interfaces.Metadata) apperrors.Error {
 	if m == nil {

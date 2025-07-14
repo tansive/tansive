@@ -45,6 +45,7 @@ type session struct {
 	logger        *zerolog.Logger
 	mcpSession    mcpSession
 	sessionType   tangentcommon.SessionType
+	mcpSessions   map[string]mcpSession
 }
 
 // GetSessionID returns the unique identifier for this session.
