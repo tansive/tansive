@@ -14,6 +14,7 @@ import (
 	"github.com/tansive/tansive/internal/common/uuid"
 	"github.com/tansive/tansive/internal/tangent/config"
 	"github.com/tansive/tansive/internal/tangent/runners/stdiorunner"
+	"github.com/tansive/tansive/internal/tangent/tangentcommon"
 	"github.com/tansive/tansive/internal/tangent/test"
 	"github.com/tansive/tansive/pkg/api"
 )
@@ -36,7 +37,7 @@ func TestOpenAI(t *testing.T) {
 		ViewDefinition: test.GetViewDefinition("dev"),
 	}
 	ctx := context.Background()
-	session, err := ActiveSessionManager().CreateSession(ctx, serverContext, token, expiresAt)
+	session, err := ActiveSessionManager().CreateSession(ctx, serverContext, token, expiresAt, tangentcommon.SessionTypeInteractive)
 	require.NoError(t, err)
 	err = session.fetchObjects(ctx)
 	require.NoError(t, err)

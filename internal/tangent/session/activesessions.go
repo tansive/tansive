@@ -11,6 +11,7 @@ import (
 	"github.com/tansive/tansive/internal/common/uuid"
 	"github.com/tansive/tansive/internal/tangent/config"
 	"github.com/tansive/tansive/internal/tangent/session/toolgraph"
+	"github.com/tansive/tansive/internal/tangent/tangentcommon"
 )
 
 // activeSessions manages the collection of active sessions.
@@ -40,7 +41,7 @@ var sessionManager *activeSessions
 // CreateSession creates a new session with the given context and authentication token.
 // Returns the created session and any error encountered during creation.
 // SessionID must be valid and unique within the session manager.
-func (as *activeSessions) CreateSession(ctx context.Context, c *ServerContext, token string, tokenExpiry time.Time) (*session, apperrors.Error) {
+func (as *activeSessions) CreateSession(ctx context.Context, c *ServerContext, token string, tokenExpiry time.Time, sessionType tangentcommon.SessionType) (*session, apperrors.Error) {
 	if c.SessionID == uuid.Nil {
 		return nil, ErrInvalidSession
 	}
@@ -57,6 +58,7 @@ func (as *activeSessions) CreateSession(ctx context.Context, c *ServerContext, t
 		tokenExpiry:   tokenExpiry,
 		callGraph:     toolgraph.NewCallGraph(3), // max depth of 3
 		invocationIDs: make(map[string]*policy.ViewDefinition),
+		sessionType:   sessionType,
 	}
 	logger := log.Ctx(ctx)
 	if logger == nil {

@@ -126,7 +126,7 @@ func resolveSession(ctx context.Context, req *tangentcommon.SessionCreateRequest
 	}
 
 	ctx = log.Ctx(ctx).With().Str("session_id", executionState.SessionID.String()).Logger().WithContext(ctx)
-	session, apperr := createActiveSession(ctx, executionState, rsp.Token, rsp.Expiry)
+	session, apperr := createActiveSession(ctx, executionState, rsp.Token, rsp.Expiry, req.SessionType)
 	if apperr != nil {
 		log.Ctx(ctx).Error().Err(apperr).Msg("unable to create active session")
 		return nil, apperr
@@ -176,7 +176,7 @@ func getExecutionState(ctx context.Context, rsp *srvsession.SessionTokenRsp) (*s
 // createActiveSession creates an active session from execution state.
 // Converts execution state to server context and creates a session in the session manager.
 // Returns the created session and any error encountered during creation.
-func createActiveSession(ctx context.Context, executionState *srvsession.ExecutionState, token string, tokenExpiry time.Time) (*session, apperrors.Error) {
+func createActiveSession(ctx context.Context, executionState *srvsession.ExecutionState, token string, tokenExpiry time.Time, sessionType tangentcommon.SessionType) (*session, apperrors.Error) {
 	serverCtx := &ServerContext{
 		SessionID:        executionState.SessionID,
 		SkillSet:         executionState.SkillSet,
@@ -191,7 +191,7 @@ func createActiveSession(ctx context.Context, executionState *srvsession.Executi
 		TenantID:         executionState.TenantID,
 	}
 
-	session, err := ActiveSessionManager().CreateSession(ctx, serverCtx, token, tokenExpiry)
+	session, err := ActiveSessionManager().CreateSession(ctx, serverCtx, token, tokenExpiry, sessionType)
 	if err != nil {
 		log.Ctx(ctx).Error().Err(err).Msg("unable to create session")
 		return nil, err

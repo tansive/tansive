@@ -41,7 +41,7 @@ func TestCreateSession(t *testing.T) {
 		ViewDefinition: test.GetViewDefinition("prod"),
 	}
 	ctx := context.Background()
-	session, err := ActiveSessionManager().CreateSession(ctx, serverContext, token, expiresAt)
+	session, err := ActiveSessionManager().CreateSession(ctx, serverContext, token, expiresAt, tangentcommon.SessionTypeInteractive)
 	require.NoError(t, err)
 	err = session.fetchObjects(ctx)
 	auditCtx, auditCancel := context.WithCancel(ctx)
@@ -153,7 +153,7 @@ func TestCreateMCPProxySession(t *testing.T) {
 	mcpService, err := mcpservice.CreateMCPService()
 	CreateSkillService()
 	require.NoError(t, err)
-	session, err := ActiveSessionManager().CreateSession(ctx, serverContext, token, expiresAt)
+	session, err := ActiveSessionManager().CreateSession(ctx, serverContext, token, expiresAt, tangentcommon.SessionTypeMCPProxy)
 	require.NoError(t, err)
 	err = session.fetchObjects(ctx)
 	auditCtx, auditCancel := context.WithCancel(ctx)

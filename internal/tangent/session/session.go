@@ -44,6 +44,7 @@ type session struct {
 	auditLogInfo  auditLogInfo
 	logger        *zerolog.Logger
 	mcpSession    mcpSession
+	sessionType   tangentcommon.SessionType
 }
 
 // GetSessionID returns the unique identifier for this session.
@@ -134,7 +135,7 @@ func (s *session) Run(ctx context.Context, invokerID string, skillName string, i
 	}
 
 	// We only support interactive skills for now
-	err = s.runInteractiveSkill(ctx, invokerID, invocationID, skillName, inputArgs, ioWriters...)
+	err = s.runSkill(ctx, invokerID, invocationID, skillName, inputArgs, ioWriters...)
 
 	if err != nil {
 		s.logger.Error().Err(err).Msg("unable to run interactive skill")
@@ -249,9 +250,9 @@ func (s *session) ValidateInputForSkill(ctx context.Context, skillName string, i
 	return skill.ValidateInput(inputArgs)
 }
 
-// runInteractiveSkill executes an interactive skill with the given parameters.
-// Currently only interactive skills are supported.
-func (s *session) runInteractiveSkill(ctx context.Context, invokerID, invocationID string, skillName string, inputArgs map[string]any, ioWriters ...*tangentcommon.IOWriters) apperrors.Error {
+// runSkill executes an skill with the given parameters.
+// Currently only skills are supported.
+func (s *session) runSkill(ctx context.Context, invokerID, invocationID string, skillName string, inputArgs map[string]any, ioWriters ...*tangentcommon.IOWriters) apperrors.Error {
 	if s.skillSet == nil {
 		return ErrUnableToGetSkillset.Msg("skillset not found")
 	}
@@ -269,12 +270,14 @@ func (s *session) runInteractiveSkill(ctx context.Context, invokerID, invocation
 		return err
 	}
 
-	interactiveIOWriters := &tangentcommon.IOWriters{
-		Out: s.getLogger(TopicInteractiveLog).With().Str("actor", "skill").Str("source", "stdout").Str("runner", runner.ID()).Str("skill", skillName).Logger(),
-		Err: s.getLogger(TopicInteractiveLog).With().Str("actor", "skill").Str("source", "stderr").Str("runner", runner.ID()).Str("skill", skillName).Logger(),
-	}
+	if s.sessionType == tangentcommon.SessionTypeInteractive {
+		interactiveIOWriters := &tangentcommon.IOWriters{
+			Out: s.getLogger(TopicInteractiveLog).With().Str("actor", "skill").Str("source", "stdout").Str("runner", runner.ID()).Str("skill", skillName).Logger(),
+			Err: s.getLogger(TopicInteractiveLog).With().Str("actor", "skill").Str("source", "stderr").Str("runner", runner.ID()).Str("skill", skillName).Logger(),
+		}
 
-	runner.AddWriters(interactiveIOWriters)
+		runner.AddWriters(interactiveIOWriters)
+	}
 
 	serviceEndpoint, goerr := config.GetSocketPath()
 	if goerr != nil {
@@ -284,11 +287,14 @@ func (s *session) runInteractiveSkill(ctx context.Context, invokerID, invocation
 	args := api.SkillInputArgs{
 		InvocationID:     invocationID,
 		ServiceEndpoint:  serviceEndpoint,
-		RunMode:          api.RunModeInteractive,
 		SessionID:        s.id.String(),
 		SkillName:        skillName,
 		InputArgs:        inputArgs,
 		SessionVariables: s.context.SessionVariables,
+	}
+
+	if s.sessionType == tangentcommon.SessionTypeInteractive {
+		args.RunMode = api.RunModeInteractive
 	}
 
 	toolErr := s.callGraph.RegisterCall(toolgraph.CallID(invokerID), toolgraph.ToolName(skillName), toolgraph.CallID(invocationID))

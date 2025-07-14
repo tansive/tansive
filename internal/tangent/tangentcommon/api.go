@@ -5,8 +5,9 @@ package tangentcommon
 type SessionType string
 
 const (
-	SessionTypeInteractive SessionType = "interactive"
-	SessionTypeMCPProxy    SessionType = "mcp-proxy"
+	SessionTypeInteractive    SessionType = "interactive"
+	SessionTypeNonInteractive SessionType = "non-interactive"
+	SessionTypeMCPProxy       SessionType = "mcp-proxy"
 )
 
 // This maintains code_verifier with _ instead of camel case to match the OAuth spec.
