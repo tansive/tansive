@@ -5,6 +5,7 @@ package mcpservice
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -88,7 +89,9 @@ func (s *MCPServer) handleMCP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"error": "Invalid session token"}`)
 		return
 	}
-	random := sessionToken[len(tokenPrefix):]
+	tokenRandom := sessionToken[len(tokenPrefix):]
+	sum := sha256.Sum256([]byte(tokenRandom))
+	random := hex.EncodeToString(sum[:])
 	if endpointVal, ok := s.sessions.Load(random); ok {
 		log.Ctx(r.Context()).Info().Msg("handleMCP")
 		handler, _ := endpointVal.(*MCPEndpoint)
@@ -123,6 +126,8 @@ func NewMCPSession(ctx context.Context, handler MCPHandler) (string, string, str
 	}
 	random := generateRandomString(32) // 128 bits = 32 hex chars
 	token := "tn_" + random
+	sum := sha256.Sum256([]byte(random))
+	random = hex.EncodeToString(sum[:])
 	if handler == nil {
 		return "", "", "", ErrMCPHandler
 	}
