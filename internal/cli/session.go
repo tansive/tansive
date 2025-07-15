@@ -150,16 +150,23 @@ Examples:
 			Body:   reqJSON,
 		}
 
-		_, url, err := client.DoRequest(opts)
+		body, _, err = client.DoRequest(opts)
 		if err != nil {
 			return err
 		}
+		var rsp map[string]any
+		if err := json.Unmarshal(body, &rsp); err != nil {
+			return fmt.Errorf("failed to parse response: %v", err)
+		}
+		url := rsp["url"].(string)
+		token := rsp["token"].(string)
 
 		if jsonOutput {
 			output := map[string]any{
 				"result": 1,
 				"value": map[string]any{
 					"mcp_endpoint": url,
+					"access_token": token,
 				},
 			}
 			jsonBytes, err := json.MarshalIndent(output, "", "    ")
@@ -170,6 +177,7 @@ Examples:
 		} else {
 			fmt.Println("Session created. MCP endpoint:")
 			fmt.Println(url)
+			fmt.Println("Access token: ", token)
 		}
 		return nil
 	},

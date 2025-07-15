@@ -160,9 +160,10 @@ func TestCreateMCPProxySession(t *testing.T) {
 	InitAuditLog(auditCtx, session)
 	defer auditCancel()
 	require.NoError(t, err)
-	url, err := session.RunMCPProxy(ctx, "", "supabase_mcp", map[string]any{})
+	url, token, err := session.RunMCPProxy(ctx, "", "supabase_mcp", map[string]any{})
 	require.NoError(t, err)
 	t.Logf("url: %s", url)
+	t.Logf("token: %s", token)
 
 	// extract the URI from the url without the domain
 	uri := ""
@@ -172,8 +173,8 @@ func TestCreateMCPProxySession(t *testing.T) {
 		t.Fatalf("could not extract /session/.../mcp from url: %s", url)
 	}
 
-	testListTools(t, mcpService, uri)
-	testInvokeTool(t, mcpService, uri)
+	testListTools(t, mcpService, uri, token)
+	testInvokeTool(t, mcpService, uri, token)
 
 }
 
@@ -191,7 +192,7 @@ type jsonrpcResponse struct {
 	Error   *json.RawMessage `json:"error,omitempty"`
 }
 
-func testListTools(t *testing.T, srv *mcpservice.MCPServer, uri string) {
+func testListTools(t *testing.T, srv *mcpservice.MCPServer, uri string, token string) {
 	// Use the client library to generate the request payload
 	listReq := mcp.ListToolsRequest{
 		PaginatedRequest: mcp.PaginatedRequest{
@@ -212,6 +213,7 @@ func testListTools(t *testing.T, srv *mcpservice.MCPServer, uri string) {
 	}
 
 	req := httptest.NewRequest("POST", uri, bytes.NewReader(listReqBytes))
+	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 	srv.Router.ServeHTTP(w, req)
 
@@ -235,7 +237,7 @@ func testListTools(t *testing.T, srv *mcpservice.MCPServer, uri string) {
 	}
 }
 
-func testInvokeTool(t *testing.T, srv *mcpservice.MCPServer, uri string) {
+func testInvokeTool(t *testing.T, srv *mcpservice.MCPServer, uri string, token string) {
 	// Directly call the 'list_tables' tool with argument {"schemas": ["public"]}
 	callReq := mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
@@ -257,6 +259,7 @@ func testInvokeTool(t *testing.T, srv *mcpservice.MCPServer, uri string) {
 	}
 
 	req2 := httptest.NewRequest("POST", uri, bytes.NewReader(callReqBytes))
+	req2.Header.Set("Authorization", "Bearer "+token)
 	w2 := httptest.NewRecorder()
 	srv.Router.ServeHTTP(w2, req2)
 
@@ -289,7 +292,6 @@ func testInvokeTool(t *testing.T, srv *mcpservice.MCPServer, uri string) {
 	if len(callResp.Content) == 0 {
 		t.Errorf("Expected non-empty Content in CallToolResultText, got none. Full response: %s", string(rpcResp2.Result))
 	}
-	t.Logf("callResp: %v", callResp)
 	require.Contains(t, callResp.Content[0].Text, "integration_tokens")
 
 	// Make SQL query
@@ -303,6 +305,7 @@ func testInvokeTool(t *testing.T, srv *mcpservice.MCPServer, uri string) {
 		t.Fatalf("Failed to marshal CallToolRequest: %v", err)
 	}
 	req2 = httptest.NewRequest("POST", uri, bytes.NewReader(callReqBytes))
+	req2.Header.Set("Authorization", "Bearer "+token)
 	w2 = httptest.NewRecorder()
 	srv.Router.ServeHTTP(w2, req2)
 

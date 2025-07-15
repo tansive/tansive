@@ -45,7 +45,7 @@ type MCPEndpoint struct {
 // MCPServer provides the HTTP server for the MCP service, managing session routing and handler registration.
 type MCPServer struct {
 	Router   *chi.Mux // HTTP router for request handling
-	sessions sync.Map // Concurrent map of session URIs to handlers
+	sessions sync.Map // Concurrent map of session randoms to handlers
 }
 
 var s *MCPServer
@@ -65,18 +65,33 @@ func CreateMCPService() (*MCPServer, error) {
 func (s *MCPServer) mountHandlers() {
 	s.Router.Use(middleware.RequestLogger)
 	s.Router.Use(middleware.PanicHandler)
-	s.Router.Route("/session/{sessionRandomURI}/mcp", func(r chi.Router) {
+	s.Router.Route("/session/mcp", func(r chi.Router) {
 		r.Post("/", s.handleMCP)
 	})
 }
 
 // handleMCP is a handler for the MCP endpoint.
 func (s *MCPServer) handleMCP(w http.ResponseWriter, r *http.Request) {
-	sessionRandomURI := chi.URLParam(r, "sessionRandomURI")
-	if val, ok := s.sessions.Load(sessionRandomURI); ok {
-		log.Ctx(r.Context()).Info().Str("sessionRandomURI", sessionRandomURI).Msg("handleMCP")
-		// If found, call the handler's HandleMCP method
-		handler, _ := val.(*MCPEndpoint)
+	authHeader := r.Header.Get("Authorization")
+	const bearerPrefix = "Bearer "
+	const tokenPrefix = "tn_"
+	if len(authHeader) <= len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprintf(w, `{"error": "Missing or invalid Authorization header"}`)
+		return
+	}
+	sessionToken := authHeader[len(bearerPrefix):]
+	if len(sessionToken) <= len(tokenPrefix) || sessionToken[:len(tokenPrefix)] != tokenPrefix {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprintf(w, `{"error": "Invalid session token"}`)
+		return
+	}
+	random := sessionToken[len(tokenPrefix):]
+	if endpointVal, ok := s.sessions.Load(random); ok {
+		log.Ctx(r.Context()).Info().Msg("handleMCP")
+		handler, _ := endpointVal.(*MCPEndpoint)
 		var raw json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -101,14 +116,15 @@ func (s *MCPServer) ListenAndServe() error {
 	return http.ListenAndServe(addr, s.Router)
 }
 
-// NewMCPSession registers a new MCP session handler and returns the random URI.
-func NewMCPSession(ctx context.Context, handler MCPHandler) (string, string, apperrors.Error) {
+// NewMCPSession registers a new MCP session handler and returns the url, token, and random.
+func NewMCPSession(ctx context.Context, handler MCPHandler) (string, string, string, apperrors.Error) {
 	if s == nil {
-		return "", "", ErrMCPServiceError.Msg("mcp service not initialized")
+		return "", "", "", ErrMCPServiceError.Msg("mcp service not initialized")
 	}
-	random := generateRandomString(64)
+	random := generateRandomString(32) // 128 bits = 32 hex chars
+	token := "tn_" + random
 	if handler == nil {
-		return "", "", ErrMCPHandler
+		return "", "", "", ErrMCPHandler
 	}
 	srv := server.NewMCPServer(
 		"tansive-mcp-server",
@@ -125,15 +141,14 @@ func NewMCPSession(ctx context.Context, handler MCPHandler) (string, string, app
 	}
 
 	s.sessions.Store(random, endpoint)
-	url := fmt.Sprintf("http://" + config.Config().ServerHostName + ":" + "8627" + "/session/" + random + "/mcp")
-	return url, random, nil
+	url := fmt.Sprintf("http://" + config.Config().MCP.HostName + ":" + config.Config().MCP.Port + "/session/mcp")
+	return url, token, random, nil
 }
 
 func StopMCPSession(ctx context.Context, random string) apperrors.Error {
 	if s == nil {
 		return ErrMCPServiceError.Msg("mcp service not initialized")
 	}
-	// There doesn't seem to be a need to stop the server.
 	s.sessions.Delete(random)
 	return nil
 }
@@ -150,9 +165,9 @@ func loadTools(ctx context.Context, srv *server.MCPServer, handler MCPHandler) a
 	for _, tool := range tools {
 		srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			// Print the input when a tool call is made
-			inputBytes, _ := json.MarshalIndent(req, "", "  ")
+			//inputBytes, _ := json.MarshalIndent(req, "", "  ")
 			toolName := req.Params.Name
-			log.Ctx(ctx).Info().Str("toolName", toolName).Str("input", string(inputBytes)).Msg("tool call")
+			log.Ctx(ctx).Info().Str("toolName", toolName).Msg("tool call")
 			// Ensure the tool name is set correctly in the forwarded request
 			forwardReq := req
 			forwardReq.Params.Name = toolName
@@ -163,7 +178,7 @@ func loadTools(ctx context.Context, srv *server.MCPServer, handler MCPHandler) a
 	return nil
 }
 
-// generateRandomString generates a 64-character random alphanumeric string (hex encoded, lowercase).
+// generateRandomString generates a random alphanumeric string (hex encoded, lowercase) of the given length (in hex chars).
 func generateRandomString(length int) string {
 	bytes := make([]byte, length/2)
 	_, err := rand.Read(bytes)

@@ -33,13 +33,13 @@ type mcpSession struct {
 }
 
 // RunMCPProxy executes a skill via the MCP proxy, handling policy checks, input transformation, auditing, and session setup. Returns the session URL or an error.
-func (s *session) RunMCPProxy(ctx context.Context, invokerID string, skillName string, inputArgs map[string]any) (string, apperrors.Error) {
+func (s *session) RunMCPProxy(ctx context.Context, invokerID string, skillName string, inputArgs map[string]any) (string, string, apperrors.Error) {
 	log.Ctx(ctx).Info().Msgf("requested skill: %s", skillName)
 	invocationID := uuid.New().String()
 	s.mcpSession.invocationID = invocationID
 	toolErr := s.callGraph.RegisterCall(toolgraph.CallID(invokerID), toolgraph.ToolName(skillName), toolgraph.CallID(invocationID))
 	if toolErr != nil {
-		return "", ErrToolGraphError.Msg(toolErr.Error())
+		return "", "", ErrToolGraphError.Msg(toolErr.Error())
 	}
 	s.invocationIDs[invocationID] = s.viewDef
 	s.auditLogInfo.auditLogger.Info().
@@ -52,19 +52,19 @@ func (s *session) RunMCPProxy(ctx context.Context, invokerID string, skillName s
 	if invokerID != "" {
 		if _, ok := s.invocationIDs[invokerID]; !ok {
 			log.Ctx(ctx).Error().Str("invocation_id", invokerID).Msg("invocationID not found")
-			return "", ErrInvalidInvocationID.Msg("invocationID not found")
+			return "", "", ErrInvalidInvocationID.Msg("invocationID not found")
 		}
 	}
 
 	if err := s.fetchObjects(ctx); err != nil {
 		s.logger.Error().Err(err).Msg("unable to fetch objects")
-		return "", err
+		return "", "", err
 	}
 
 	isAllowed, basis, actions, err := s.ValidateRunPolicy(ctx, invokerID, skillName)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("unable to validate run policy")
-		return "", err
+		return "", "", err
 	}
 	if !isAllowed {
 		msg := fmt.Sprintf("blocked by Tansive policy: view '%s' does not authorize any of required actions - %v - to use this skill", s.context.View, actions)
@@ -79,7 +79,7 @@ func (s *session) RunMCPProxy(ctx context.Context, invokerID string, skillName s
 			Str("skill", skillName).
 			Any("actions", actions).
 			Msg("blocked by policy")
-		return "", ErrBlockedByPolicy.Msg(msg)
+		return "", "", ErrBlockedByPolicy.Msg(msg)
 	}
 	msg := fmt.Sprintf("allowed by Tansive policy: view '%s' authorizes actions - %v - to use this skill", s.context.View, actions)
 	s.logger.Info().Str("policy_decision", "true").Msg(msg)
@@ -105,7 +105,7 @@ func (s *session) RunMCPProxy(ctx context.Context, invokerID string, skillName s
 			Err(err).
 			Str("skill", skillName).
 			Msg("input transformed")
-		return "", err
+		return "", "", err
 	}
 	if transformApplied {
 		s.auditLogInfo.auditLogger.Info().
@@ -117,7 +117,7 @@ func (s *session) RunMCPProxy(ctx context.Context, invokerID string, skillName s
 			Msg("input transformed")
 	}
 
-	url, err := s.startMCPProxySession(ctx, invokerID, skillName, inputArgs)
+	url, token, err := s.startMCPProxySession(ctx, invokerID, skillName, inputArgs)
 
 	if err != nil {
 		s.logger.Error().Err(err).Msg("unable to run interactive skill")
@@ -137,44 +137,44 @@ func (s *session) RunMCPProxy(ctx context.Context, invokerID string, skillName s
 			Str("skill", skillName).
 			Msg("skill completed")
 	}
-	return url, err
+	return url, token, err
 }
 
 // startMCPProxySession initializes an MCP proxy session for the given skill, validating input and runner, and returns the session URL.
-func (s *session) startMCPProxySession(ctx context.Context, invokerID string, skillName string, inputArgs map[string]any) (string, apperrors.Error) {
+func (s *session) startMCPProxySession(ctx context.Context, invokerID string, skillName string, inputArgs map[string]any) (string, string, apperrors.Error) {
 	_ = invokerID
 
 	skill, err := s.resolveSkill(skillName)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if err := skill.ValidateInput(inputArgs); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	mcpfilter, ok := skill.Annotations["mcp:tools"]
 	if !ok {
-		return "", ErrSkillNotMCP.Msg("skill is not an MCP server")
+		return "", "", ErrSkillNotMCP.Msg("skill is not an MCP server")
 	}
 
 	runnerCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	runner, err := s.getRunner(runnerCtx, skillName)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	s.mcpSession.runner = runner
 	s.mcpSession.source = skill.Source
 
-	url, random, err := mcpservice.NewMCPSession(ctx, s)
+	url, token, random, err := mcpservice.NewMCPSession(ctx, s)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	s.mcpSession.url = url
 	s.mcpSession.random = random
 	s.mcpSession.filter = mcpfilter
-	return url, nil
+	return url, token, nil
 }
 
 // MCPFilterTools filters the available MCP tools based on the current skill's MCP filter annotation and skill set.

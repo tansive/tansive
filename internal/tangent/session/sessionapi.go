@@ -122,15 +122,19 @@ func processMCPProxySession(ctx context.Context, req *tangentcommon.SessionCreat
 	if err != nil {
 		return nil, err
 	}
-	url, err := runMCPProxySession(ctx, session)
+	url, token, err := runMCPProxySession(ctx, session)
 	if err != nil {
 		return nil, err
 	}
 
+	response := map[string]any{
+		"url":   url,
+		"token": token,
+	}
 	rsp = &httpx.Response{
 		StatusCode: http.StatusCreated,
 		Location:   url,
-		Response:   nil,
+		Response:   response,
 	}
 	return rsp, nil
 }
@@ -344,7 +348,7 @@ func runInteractiveSession(ctx context.Context, w http.ResponseWriter, session *
 	return nil
 }
 
-func runMCPProxySession(ctx context.Context, session *session) (url string, apperr apperrors.Error) {
+func runMCPProxySession(ctx context.Context, session *session) (url string, token string, apperr apperrors.Error) {
 	auditLogCtx, cancelAuditLog := context.WithCancel(context.Background())
 	session.auditLogInfo.auditLogCancel = cancelAuditLog
 	defer func() {
@@ -366,15 +370,15 @@ func runMCPProxySession(ctx context.Context, session *session) (url string, appe
 
 	log.Ctx(ctx).Info().Str("skill", session.context.Skill).Msg("running session")
 
-	url, apperr = session.RunMCPProxy(ctx, "", session.context.Skill, session.context.InputArgs)
+	url, token, apperr = session.RunMCPProxy(ctx, "", session.context.Skill, session.context.InputArgs)
 	if apperr != nil {
 		log.Ctx(ctx).Error().Err(apperr).Msg("session failed")
 		session.auditLogInfo.auditLogger.Error().Str("event", "session_end").Err(apperr).Msg("session failed")
-		return "", apperr
+		return "", "", apperr
 	}
 
 	log.Ctx(ctx).Info().Msg("session started")
-	return url, nil
+	return url, token, nil
 }
 
 func processStopSession(ctx context.Context, sessionID uuid.UUID) apperrors.Error {
