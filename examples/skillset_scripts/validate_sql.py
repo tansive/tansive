@@ -102,9 +102,10 @@ def process(input_args):
         # Only check allow if not denied
         if not stmt_detail["denied"]:
             allowed_tables = allow.get(stmt_type.lower(), [])
+            allowed_tables_all = allow.get("all", [])
             allowed_tables_normalized = {
                 normalize_table_name(t) for t in allowed_tables
-            }
+            } | {normalize_table_name(t) for t in allowed_tables_all}
             for table in real_tables:
                 table_normalized = normalize_table_name(table)
                 if table_normalized not in allowed_tables_normalized:

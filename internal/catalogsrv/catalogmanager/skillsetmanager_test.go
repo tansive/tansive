@@ -1033,4 +1033,61 @@ func TestSkillSetManagerContextOperations(t *testing.T) {
 		appErr := manager.SetContextValue("non-existent", newValue)
 		assert.Error(t, appErr)
 	})
+
+	t.Run("GetContextValue - with viewDef and exported actions", func(t *testing.T) {
+		// Set up a context with exported actions and valueByAction
+		barVal, err := types.NullableAnyFrom(map[string]any{"foo": "bar"})
+		require.NoError(t, err)
+		bazVal, err := types.NullableAnyFrom(map[string]any{"foo": "baz"})
+		require.NoError(t, err)
+		manager.skillSet.Spec.Context = []SkillSetContext{
+			{
+				Name:   "action-context",
+				Schema: json.RawMessage(`{"type": "object", "properties": {"foo": {"type": "string"}}, "required": ["foo"]}`),
+				Value:  types.NilAny(),
+				ValueByAction: []ContextValueByAction{
+					{Action: policy.ActionResourceRead, Value: barVal},
+					{Action: policy.ActionResourceEdit, Value: bazVal},
+				},
+				Attributes: ContextAttributes{
+					ExportedActions: []policy.Action{policy.ActionResourceRead, policy.ActionResourceEdit},
+				},
+			},
+		}
+
+		resourcePath := manager.GetResourcePath()
+		// Allow only ActionResourceRead on this resource
+		viewDef := &policy.ViewDefinition{
+			Scope: policy.Scope{Catalog: "test-catalog", Variant: "default", Namespace: "default"},
+			Rules: policy.Rules{
+				{
+					Intent:  policy.IntentAllow,
+					Actions: []policy.Action{policy.ActionResourceRead},
+					Targets: []policy.TargetResource{policy.TargetResource(resourcePath)},
+				},
+			},
+		}
+
+		// Should return the value for ActionResourceRead
+		value, appErr := manager.GetContextValue("action-context", viewDef)
+		assert.NoError(t, appErr)
+		assert.False(t, value.IsNil())
+		var result map[string]any
+		err = value.GetAs(&result)
+		assert.NoError(t, err)
+		assert.Equal(t, "bar", result["foo"])
+
+		// Now deny all actions
+		viewDef.Rules = policy.Rules{
+			{
+				Intent:  policy.IntentDeny,
+				Actions: []policy.Action{policy.ActionResourceRead, policy.ActionResourceEdit},
+				Targets: []policy.TargetResource{policy.TargetResource(resourcePath)},
+			},
+		}
+		value, appErr = manager.GetContextValue("action-context", viewDef)
+		// Should fall back to default Value (which is NilAny)
+		assert.NoError(t, appErr)
+		assert.True(t, value.IsNil())
+	})
 }

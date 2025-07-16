@@ -168,7 +168,7 @@ const devView = `
     },
     {
       "intent": "Allow",
-      "actions": ["system.skillset.use", "supabase.mcp.use", "supabase.tables.list", "supabase.sql.query"],
+      "actions": ["system.skillset.use", "supabase.mcp.use", "supabase.tables.list", "supabase.sql.query", "supabase.sql.superuser"],
       "targets": ["res://skillsets/skillsets/supabase-demo"]
     }]
 	}
@@ -259,36 +259,46 @@ spec:
         deny:
           all:
             - integration_tokens
-      annotations: {}
+      valueByAction:
+        - action: supabase.sql.superuser
+          value:
+            allow:
+              all:
+                - support_tickets
+                - support_messages
+                - integration_tokens
+        - action: supabase.sql.query
+          value:
+            deny:
+              all:
+                - integration_tokens
+      attributes: 
+        readOnly: true
+        exportedActions:
+          - supabase.sql.superuser
+          - supabase.sql.query
   skills:
     - name: validate_sql
       source: sql-validator
       description: Validate SQL input
       inputSchema:
         type: object
-        required: []
+        required:
+          - sql
+        properties:
+          sql:
+            type: string
       outputSchema:
         type: object
       exportedActions:
         - supabase.mcp.use
     - name: list_tables
       source: supabase-mcp-server
-      description: List tables in the database
-      inputSchema:
-        type: object
-        required: []
-      outputSchema:
-        type: object
       exportedActions:
         - supabase.tables.list
     - name: execute_sql
       source: supabase-mcp-server
       description: Execute SQL query
-      inputSchema:
-        type: object
-        required: []
-      outputSchema:
-        type: object
       transform: |
         function(session, input) {
           let validationInput = {
@@ -311,11 +321,6 @@ spec:
     - name: supabase_mcp
       source: supabase-mcp-server
       description: Supabase MCP server
-      inputSchema:
-        type: object
-        required: []
-      outputSchema:
-        type: object
       exportedActions:
         - supabase.mcp.use
       annotations:

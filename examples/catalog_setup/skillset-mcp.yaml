@@ -57,36 +57,58 @@ spec:
         deny:
           all:
             - integration_tokens
-      annotations: {}
+      valueByAction:
+        - action: supabase.sql.devopsadmin
+          value:
+            deny:
+              select:
+                - support_messages
+            allow:
+              all:
+                - support_messages
+                - integration_tokens
+                - support_tickets
+        - action: supabase.sql.develop
+          value:
+            allow:
+              all:
+                - support_tickets
+                - support_messages
+                - integration_tokens
+            deny:
+              all:
+                - integration_tokens
+              drop:
+                - integration_tokens
+                - support_tickets
+                - support_messages
+      attributes:
+        readOnly: true
+        exportedActions:
+          - supabase.sql.query
+          - supabase.sql.develop
+          - supabase.sql.devopsadmin
   skills:
     - name: validate_sql
       source: sql-validator
       description: Validate SQL input
       inputSchema:
         type: object
-        required: []
+        required:
+          - sql
+        properties:
+          sql:
+            type: string
       outputSchema:
         type: object
       exportedActions:
         - supabase.mcp.use
     - name: list_tables
       source: supabase-mcp-server
-      description: List tables in the database
-      inputSchema:
-        type: object
-        required: []
-      outputSchema:
-        type: object
       exportedActions:
-        - supabase.tables.list
+        - supabase.mcp.use
     - name: execute_sql
       source: supabase-mcp-server
-      description: Execute SQL query
-      inputSchema:
-        type: object
-        required: []
-      outputSchema:
-        type: object
       transform: |
         function(session, input) {
           let validationInput = {
@@ -109,12 +131,115 @@ spec:
     - name: supabase_mcp
       source: supabase-mcp-server
       description: Supabase MCP server
-      inputSchema:
-        type: object
-        required: []
-      outputSchema:
-        type: object
       exportedActions:
         - supabase.mcp.use
       annotations:
         mcp:tools: overlay
+        
+    - name: apply_migration
+      source: supabase-mcp-server
+      description: Apply a database migration
+      exportedActions:
+        - supabase.deploy.write
+
+    - name: create_branch
+      source: supabase-mcp-server
+      description: Create a new database branch
+      exportedActions:
+        - supabase.deploy.write
+
+    - name: delete_branch
+      source: supabase-mcp-server
+      description: Delete a database branch
+      exportedActions:
+        - supabase.deploy.write
+
+    - name: deploy_edge_function
+      source: supabase-mcp-server
+      description: Deploy an Edge Function
+      exportedActions:
+        - supabase.deploy.write
+
+    - name: execute_sql
+      source: supabase-mcp-server
+      description: Execute a SQL query
+      exportedActions:
+        - supabase.sql.query
+
+    - name: generate_typescript_types
+      source: supabase-mcp-server
+      description: Generate TypeScript types
+      exportedActions:
+        - supabase.codegen.read
+
+    - name: get_advisors
+      source: supabase-mcp-server
+      description: Get security and performance advisors
+      exportedActions:
+        - supabase.deploy.read
+
+    - name: get_anon_key
+      source: supabase-mcp-server
+      description: Get the anonymous API key
+      exportedActions:
+        - supabase.project.read
+
+    - name: get_logs
+      source: supabase-mcp-server
+      description: Get recent project logs
+      exportedActions:
+        - supabase.deploy.read
+
+    - name: get_project_url
+      source: supabase-mcp-server
+      description: Get the project API URL
+      exportedActions:
+        - supabase.project.read
+
+    - name: list_branches
+      source: supabase-mcp-server
+      description: List all database branches
+      exportedActions:
+        - supabase.deploy.read
+
+    - name: list_edge_functions
+      source: supabase-mcp-server
+      description: List all Edge Functions
+      exportedActions:
+        - supabase.deploy.read
+
+    - name: list_extensions
+      source: supabase-mcp-server
+      description: List all database extensions
+      exportedActions:
+        - supabase.deploy.read
+
+    - name: list_migrations
+      source: supabase-mcp-server
+      description: List all database migrations
+      exportedActions:
+        - supabase.deploy.read
+
+    - name: merge_branch
+      source: supabase-mcp-server
+      description: Merge a branch into production
+      exportedActions:
+        - supabase.deploy.write
+
+    - name: rebase_branch
+      source: supabase-mcp-server
+      description: Rebase a branch onto production
+      exportedActions:
+        - supabase.deploy.write
+
+    - name: reset_branch
+      source: supabase-mcp-server
+      description: Reset a branch to a migration version
+      exportedActions:
+        - supabase.deploy.write
+
+    - name: search_docs
+      source: supabase-mcp-server
+      description: Search the Supabase documentation
+      exportedActions:
+        - supabase.docs.read

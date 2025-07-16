@@ -491,7 +491,7 @@ func (s *session) getContext(invocationID string, name string) (any, apperrors.E
 	if s.skillSet == nil {
 		return nil, ErrUnableToGetSkillset.Msg("skillset not found")
 	}
-	value, err := s.skillSet.GetContextValue(name)
+	value, err := s.skillSet.GetContextValue(name, s.viewDef)
 	if err != nil {
 		s.auditLogInfo.auditLogger.Error().
 			Str("event", "context_get").

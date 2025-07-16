@@ -297,7 +297,7 @@ func testInvokeTool(t *testing.T, srv *mcpservice.MCPServer, uri string, token s
 	// Make SQL query
 
 	callReq.Params.Name = "execute_sql"
-	callReq.Params.Arguments = map[string]interface{}{"query": "SELECT * FROM support_tickets;"}
+	callReq.Params.Arguments = map[string]interface{}{"query": "SELECT * FROM integration_tokens;"}
 
 	callJsonReq.Params = callReq.Params
 	callReqBytes, err = json.Marshal(callJsonReq)

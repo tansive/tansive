@@ -8,6 +8,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/rs/zerolog/log"
+	"github.com/tansive/tansive/internal/catalogsrv/policy"
 	"github.com/tansive/tansive/internal/common/apperrors"
 	"github.com/tansive/tansive/internal/common/uuid"
 	"github.com/tansive/tansive/internal/tangent/runners"
@@ -188,17 +189,26 @@ func (s *session) MCPFilterTools(ctx context.Context, tools []mcp.Tool) []mcp.To
 	if !ok {
 		return tools
 	}
-	if mcpfilter == FilterNoFilter || mcpfilter == FilterOverlay {
+	if mcpfilter == FilterNoFilter {
 		return tools
 	}
 
 	skills := s.skillSet.GetAllSkills()
 	filteredTools := []mcp.Tool{}
+outer:
 	for _, tool := range tools {
 		for _, skill := range skills {
 			if skill.Source == s.mcpSession.source && skill.Name == tool.Name {
+				allowed, _, err := policy.AreActionsAllowedOnResource(s.viewDef, s.skillSet.GetResourcePath(), skill.ExportedActions)
+				if err != nil || !allowed {
+					continue outer
+				}
 				filteredTools = append(filteredTools, tool)
+				continue outer
 			}
+		}
+		if mcpfilter == FilterOverlay {
+			filteredTools = append(filteredTools, tool)
 		}
 	}
 

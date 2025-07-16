@@ -104,7 +104,7 @@ func (cfg *Config) WriteConfig(file string) error {
 		return fmt.Errorf("unable to generate configuration: %w", err)
 	}
 
-	err = os.WriteFile(file, yamlStr, os.FileMode(0644))
+	err = os.WriteFile(file, yamlStr, os.FileMode(0600))
 	if err != nil {
 		return fmt.Errorf("unable to write config file: %w", err)
 	}
