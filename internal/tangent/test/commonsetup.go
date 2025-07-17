@@ -14,7 +14,7 @@ import (
 	"github.com/tansive/tansive/internal/catalogsrv/db"
 )
 
-type testSetup struct {
+type TestSetup struct {
 	Ctx       context.Context
 	TenantID  catcommon.TenantId
 	ProjectID catcommon.ProjectId
@@ -23,7 +23,7 @@ type testSetup struct {
 }
 
 // SetupTestCatalog sets up a test catalog with default view and test objects
-func SetupTestCatalog(t *testing.T) *testSetup {
+func SetupTestCatalog(t *testing.T) *TestSetup {
 	ts := SetupTest(t)
 
 	// Test successful adoption of default view
@@ -38,7 +38,7 @@ func SetupTestCatalog(t *testing.T) *testSetup {
 }
 
 // SetupTest initializes the test environment
-func SetupTest(t *testing.T) *testSetup {
+func SetupTest(t *testing.T) *TestSetup {
 	ctx := NewDb(t)
 	t.Cleanup(func() {
 		db.DB(ctx).Close(ctx)
@@ -81,7 +81,7 @@ func SetupTest(t *testing.T) *testSetup {
 	response := ExecuteTestRequest(t, httpReq, nil)
 	require.Equal(t, http.StatusCreated, response.Code)
 
-	return &testSetup{
+	return &TestSetup{
 		Ctx:       ctx,
 		TenantID:  tenantID,
 		ProjectID: projectID,
@@ -143,7 +143,16 @@ func SetupObjects(t *testing.T, token string) {
 
 	// Create a SkillSet for dev variant
 	httpReq, _ = http.NewRequest("POST", "/skillsets?variant=dev", nil)
-	req = string(getMCPSkillsetDef())
+	req = string(getMCPSkillsetDef("dev"))
+	SetRequestBodyAndHeader(t, httpReq, req)
+	httpReq.Header.Set("Authorization", "Bearer "+token)
+	response = ExecuteTestRequest(t, httpReq, nil)
+	t.Logf("Skillset response: %s", response.Body.String())
+	require.Equal(t, http.StatusCreated, response.Code)
+
+	// Create a SkillSet for dev variant
+	httpReq, _ = http.NewRequest("POST", "/skillsets?variant=prod", nil)
+	req = string(getMCPSkillsetDef("prod"))
 	SetRequestBodyAndHeader(t, httpReq, req)
 	httpReq.Header.Set("Authorization", "Bearer "+token)
 	response = ExecuteTestRequest(t, httpReq, nil)
@@ -197,6 +206,11 @@ func SetupObjects(t *testing.T, token string) {
 					"intent": "Allow",
 					"actions": ["system.skillset.use","kubernetes.pods.list", "kubernetes.troubleshoot"],
 					"targets": ["res://skillsets/skillsets/kubernetes-demo"]
+				},
+				{
+					"intent": "Allow",
+					"actions": ["system.skillset.use", "supabase.mcp.use", "supabase.tables.list", "supabase.sql.query"],
+					"targets": ["res://skillsets/skillsets/supabase-demo"]
 				}]
 			}
 		}`

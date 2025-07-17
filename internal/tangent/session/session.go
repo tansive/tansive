@@ -367,11 +367,15 @@ func (s *session) runSkill(ctx context.Context, invokerID, invocationID string, 
 			cancel()
 		}
 
-		time.AfterFunc(100*time.Millisecond, func() {
-			once.Do(func() {
-				gracefulExitChan <- struct{}{}
-			})
+		once.Do(func() {
+			gracefulExitChan <- struct{}{}
 		})
+
+		// time.AfterFunc(100*time.Millisecond, func() {
+		// 	once.Do(func() {
+		// 		gracefulExitChan <- struct{}{}
+		// 	})
+		// })
 	}()
 
 	<-gracefulExitChan

@@ -327,7 +327,7 @@ spec:
         mcp:tools: filter-tools
 `
 
-func getMCPSkillsetDef() json.RawMessage {
+func getMCPSkillsetDef(env string) json.RawMessage {
 	jsonData := getJsonFromYaml(mcpSkillsetDef)
 	projectRef := os.Getenv("SUPABASE_PROJECT")
 	accessToken := os.Getenv("SUPABASE_ACCESS_TOKEN")
@@ -340,6 +340,10 @@ func getMCPSkillsetDef() json.RawMessage {
 	// Set the access token in env
 	if accessToken != "" {
 		jsonData, _ = sjson.SetBytes(jsonData, "spec.sources.0.config.env.SUPABASE_ACCESS_TOKEN", accessToken)
+	}
+
+	if env == "prod" {
+		jsonData, _ = sjson.DeleteBytes(jsonData, "spec.skills.2.transform")
 	}
 
 	return jsonData
