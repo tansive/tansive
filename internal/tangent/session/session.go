@@ -229,6 +229,7 @@ func (s *session) skillInvoker(ctx context.Context, invokerID string) func(skill
 		})
 
 		if apperr != nil {
+			s.logger.Error().Err(apperr).Str("stderr", errWriter.String()).Msg("error invoking skill")
 			return nil, apperr
 		}
 
