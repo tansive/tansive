@@ -93,9 +93,12 @@ For Ops Teams, Tansive provides a `yaml` based control plane for running AI agen
 Tansive lets developers run AI agents with controlled access to tools — you define what tools each agent can use, and Tansive enforces those rules while logging full tool call traces.
 
 - Call tools via Tansive from your agents written in LangGraph, CrewAI or any of your favorite frameworks, so you get filtered tool access, runtime evaluation of tool inputs, and detailed audit logs with full tool call lineage.
+
 - Tansive is also an orchestrator, running your tools or agent code directly.
+
   - Let Tansive run your tools written in Python, Node, Go, etc. Tansive will automatically create an MCP endpoint for your tools with authenticated HTTP transport, so you don't have to manage tokens and authorization.
   - You can also have Tansive run your agent code directly. When you do, the agent will be subject to the same policy and runtime access constraints, giving you end-to-end control over the agent.
+
 - Run multiple concurrent sessions with different policies — Create workflow templates with tools and agents tagged with _Capability_ tags, then create filters based on those tags to control what each session can do.
 
 <details> <summary>Examples: Create tool and agent sessions</summary>
