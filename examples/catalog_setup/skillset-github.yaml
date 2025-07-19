@@ -1,0 +1,406 @@
+apiVersion: 0.1.0-alpha.1
+kind: SkillSet
+metadata:
+  name: github-demo
+  catalog: test-catalog
+  variant: test-variant
+  path: /demo-skillsets
+spec:
+  version: "0.1.0"
+  sources:
+    - name: github-mcp-server
+      runner: system.mcp.stdio
+      config:
+        version: "0.1.0"
+        command: {{ .ENV.GITHUB_CMD }}
+        args:
+          - stdio
+        env:
+          GITHUB_PERSONAL_ACCESS_TOKEN: {{ .ENV.GITHUB_TOKEN }}
+  skills:
+    # GitHub MCP Server
+    - name: github-mcp-server
+      source: github-mcp-server
+      description: GitHub MCP server
+      exportedActions:
+        - github.mcp.use
+      annotations:
+        mcp:tools: overlay
+
+    # Basic Read Operations (github.read.basic)
+    - name: get_me
+      source: github-mcp-server
+      description: Get my user profile
+      exportedActions:
+        - github.read.basic
+    - name: get_issue
+      source: github-mcp-server
+      description: Get issue details
+      exportedActions:
+        - github.read.basic
+    - name: get_pull_request
+      source: github-mcp-server
+      description: Get pull request details
+      exportedActions:
+        - github.read.basic
+    - name: list_issues
+      source: github-mcp-server
+      description: List issues
+      exportedActions:
+        - github.read.basic
+    - name: list_pull_requests
+      source: github-mcp-server
+      description: List pull requests
+      exportedActions:
+        - github.read.basic
+    - name: get_file_contents
+      source: github-mcp-server
+      description: Get file or directory contents
+      exportedActions:
+        - github.read.basic
+    - name: list_branches
+      source: github-mcp-server
+      description: List branches
+      exportedActions:
+        - github.read.basic
+    - name: list_commits
+      source: github-mcp-server
+      description: List commits
+      exportedActions:
+        - github.read.basic
+    - name: search_code
+      source: github-mcp-server
+      description: Search code
+      exportedActions:
+        - github.read.basic
+    - name: search_repositories
+      source: github-mcp-server
+      description: Search repositories
+      exportedActions:
+        - github.read.basic
+
+    # Code Development Operations (github.write.code)
+    - name: create_pull_request
+      source: github-mcp-server
+      description: Open new pull request
+      exportedActions:
+        - github.write.code
+    - name: update_pull_request
+      source: github-mcp-server
+      description: Edit pull request
+      exportedActions:
+        - github.write.code
+    - name: create_branch
+      source: github-mcp-server
+      description: Create branch
+      exportedActions:
+        - github.write.code
+    - name: create_or_update_file
+      source: github-mcp-server
+      description: Create or update file
+      exportedActions:
+        - github.write.code
+    - name: delete_file
+      source: github-mcp-server
+      description: Delete file
+      exportedActions:
+        - github.write.code
+    - name: push_files
+      source: github-mcp-server
+      description: Push files to repository
+      exportedActions:
+        - github.write.code
+    - name: add_issue_comment
+      source: github-mcp-server
+      description: Add comment to issue
+      exportedActions:
+        - github.write.code
+    - name: create_issue
+      source: github-mcp-server
+      description: Open new issue
+      exportedActions:
+        - github.write.code
+    - name: update_issue
+      source: github-mcp-server
+      description: Edit issue
+      exportedActions:
+        - github.write.code
+
+    # Pull Request Management (github.develop.code)
+    - name: create_pending_pull_request_review
+      source: github-mcp-server
+      description: Create pending pull request review
+      exportedActions:
+        - github.develop.code
+    - name: submit_pending_pull_request_review
+      source: github-mcp-server
+      description: Submit pending pull request review
+      exportedActions:
+        - github.develop.code
+    - name: create_and_submit_pull_request_review
+      source: github-mcp-server
+      description: Create and submit pull request review
+      exportedActions:
+        - github.develop.code
+    - name: add_comment_to_pending_review
+      source: github-mcp-server
+      description: Add review comment to pending review
+      exportedActions:
+        - github.develop.code
+    - name: get_pull_request_comments
+      source: github-mcp-server
+      description: Get pull request comments
+      exportedActions:
+        - github.develop.code
+    - name: get_pull_request_reviews
+      source: github-mcp-server
+      description: Get pull request reviews
+      exportedActions:
+        - github.develop.code
+    - name: get_pull_request_diff
+      source: github-mcp-server
+      description: Get pull request diff
+      exportedActions:
+        - github.develop.code
+    - name: get_pull_request_files
+      source: github-mcp-server
+      description: Get pull request files
+      exportedActions:
+        - github.develop.code
+    - name: get_pull_request_status
+      source: github-mcp-server
+      description: Get pull request status checks
+      exportedActions:
+        - github.develop.code
+    - name: merge_pull_request
+      source: github-mcp-server
+      description: Merge pull request
+      exportedActions:
+        - github.develop.code
+    - name: update_pull_request_branch
+      source: github-mcp-server
+      description: Update pull request branch
+      exportedActions:
+        - github.develop.code
+    - name: request_copilot_review
+      source: github-mcp-server
+      description: Request Copilot review
+      exportedActions:
+        - github.develop.code
+    - name: assign_copilot_to_issue
+      source: github-mcp-server
+      description: Assign Copilot to issue
+      exportedActions:
+        - github.develop.code
+
+    # Workflow Management (github.workflow.manage)
+    - name: list_workflows
+      source: github-mcp-server
+      description: List workflows
+      exportedActions:
+        - github.workflow.manage
+    - name: list_workflow_runs
+      source: github-mcp-server
+      description: List workflow runs
+      exportedActions:
+        - github.workflow.manage
+    - name: get_workflow_run
+      source: github-mcp-server
+      description: Get workflow run
+      exportedActions:
+        - github.workflow.manage
+    - name: run_workflow
+      source: github-mcp-server
+      description: Run workflow
+      exportedActions:
+        - github.workflow.manage
+    - name: rerun_workflow_run
+      source: github-mcp-server
+      description: Rerun workflow run
+      exportedActions:
+        - github.workflow.manage
+    - name: rerun_failed_jobs
+      source: github-mcp-server
+      description: Rerun failed jobs
+      exportedActions:
+        - github.workflow.manage
+    - name: cancel_workflow_run
+      source: github-mcp-server
+      description: Cancel workflow run
+      exportedActions:
+        - github.workflow.manage
+    - name: list_workflow_jobs
+      source: github-mcp-server
+      description: List workflow jobs
+      exportedActions:
+        - github.workflow.manage
+    - name: get_job_logs
+      source: github-mcp-server
+      description: Get job logs
+      exportedActions:
+        - github.workflow.manage
+    - name: get_workflow_run_logs
+      source: github-mcp-server
+      description: Get workflow run logs
+      exportedActions:
+        - github.workflow.manage
+    - name: delete_workflow_run_logs
+      source: github-mcp-server
+      description: Delete workflow logs
+      exportedActions:
+        - github.workflow.manage
+    - name: get_workflow_run_usage
+      source: github-mcp-server
+      description: Get workflow usage
+      exportedActions:
+        - github.workflow.manage
+    - name: list_workflow_run_artifacts
+      source: github-mcp-server
+      description: List workflow artifacts
+      exportedActions:
+        - github.workflow.manage
+    - name: download_workflow_run_artifact
+      source: github-mcp-server
+      description: Download workflow artifact
+      exportedActions:
+        - github.workflow.manage
+
+    # Security Management (github.security.manage)
+    - name: list_code_scanning_alerts
+      source: github-mcp-server
+      description: List code scanning alerts
+      exportedActions:
+        - github.security.manage
+    - name: get_code_scanning_alert
+      source: github-mcp-server
+      description: Get code scanning alert
+      exportedActions:
+        - github.security.manage
+    - name: list_dependabot_alerts
+      source: github-mcp-server
+      description: List dependabot alerts
+      exportedActions:
+        - github.security.manage
+    - name: get_dependabot_alert
+      source: github-mcp-server
+      description: Get dependabot alert
+      exportedActions:
+        - github.security.manage
+    - name: list_secret_scanning_alerts
+      source: github-mcp-server
+      description: List secret scanning alerts
+      exportedActions:
+        - github.security.manage
+    - name: get_secret_scanning_alert
+      source: github-mcp-server
+      description: Get secret scanning alert
+      exportedActions:
+        - github.security.manage
+
+    # Content Management (github.content.manage)
+    - name: get_commit
+      source: github-mcp-server
+      description: Get commit details
+      exportedActions:
+        - github.content.manage
+    - name: get_tag
+      source: github-mcp-server
+      description: Get tag details
+      exportedActions:
+        - github.content.manage
+    - name: list_tags
+      source: github-mcp-server
+      description: List tags
+      exportedActions:
+        - github.content.manage
+    - name: fork_repository
+      source: github-mcp-server
+      description: Fork repository
+      exportedActions:
+        - github.content.manage
+    - name: search_issues
+      source: github-mcp-server
+      description: Search issues
+      exportedActions:
+        - github.content.manage
+    - name: search_pull_requests
+      source: github-mcp-server
+      description: Search pull requests
+      exportedActions:
+        - github.content.manage
+    - name: get_issue_comments
+      source: github-mcp-server
+      description: Get issue comments
+      exportedActions:
+        - github.content.manage
+
+    # Administrative Operations (github.admin.manage)
+    - name: create_repository
+      source: github-mcp-server
+      description: Create repository
+      exportedActions:
+        - github.admin.manage
+    - name: search_orgs
+      source: github-mcp-server
+      description: Search organizations
+      exportedActions:
+        - github.admin.manage
+    - name: search_users
+      source: github-mcp-server
+      description: Search users
+      exportedActions:
+        - github.admin.manage
+
+    # Notification Management (github.test.manage)
+    - name: list_notifications
+      source: github-mcp-server
+      description: List notifications
+      exportedActions:
+        - github.test.manage
+    - name: get_notification_details
+      source: github-mcp-server
+      description: Get notification details
+      exportedActions:
+        - github.test.manage
+    - name: dismiss_notification
+      source: github-mcp-server
+      description: Dismiss notification
+      exportedActions:
+        - github.test.manage
+    - name: manage_notification_subscription
+      source: github-mcp-server
+      description: Manage notification subscription
+      exportedActions:
+        - github.test.manage
+    - name: manage_repository_notification_subscription
+      source: github-mcp-server
+      description: Manage repository notification subscription
+      exportedActions:
+        - github.test.manage
+    - name: mark_all_notifications_read
+      source: github-mcp-server
+      description: Mark all notifications as read
+      exportedActions:
+        - github.test.manage
+
+    # Discussion Management (github.content.manage)
+    - name: list_discussions
+      source: github-mcp-server
+      description: List discussions
+      exportedActions:
+        - github.content.manage
+    - name: get_discussion
+      source: github-mcp-server
+      description: Get discussion
+      exportedActions:
+        - github.content.manage
+    - name: get_discussion_comments
+      source: github-mcp-server
+      description: Get discussion comments
+      exportedActions:
+        - github.content.manage
+    - name: list_discussion_categories
+      source: github-mcp-server
+      description: List discussion categories
+      exportedActions:
+        - github.content.manage 

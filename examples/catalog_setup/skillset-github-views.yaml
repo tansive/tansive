@@ -1,0 +1,153 @@
+# GitHub Role-Based Access Control Views
+# 
+# This file defines role-based access control views for GitHub operations using capability tags.
+# Each view grants access to specific capability tags that align with typical role responsibilities.
+#
+# Role-Based Views:
+# - developer: Can read, write code, and manage pull requests
+# - devops-engineer: Can manage workflows, security, and administrative tasks  
+# - tester: Can read, create issues, and manage notifications
+# - engineering-manager: Can read, manage pull requests, content, and administrative tasks
+# - security-engineer: Can read, manage security alerts, and workflows
+# - read-only: Can only read repositories and content
+# - full-access: Can perform all GitHub operations
+#
+# Each view provides fine-grained access control while maintaining operational needs.
+
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: developer
+  catalog: demo-catalog
+  variant: dev
+  description: View for developers - can read, write code, and manage pull requests
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - github.mcp.use
+        - github.read.basic
+        - github.write.code
+        - github.develop.code
+      targets:
+        - res://skillsets/demo-skillsets/github-demo
+---
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: github-devops-engineer
+  catalog: demo-catalog
+  variant: dev
+  description: View for DevOps engineers - can manage workflows, security, and administrative tasks
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - github.mcp.use
+        - github.read.basic
+        - github.workflow.manage
+        - github.security.manage
+        - github.admin.manage
+      targets:
+        - res://skillsets/demo-skillsets/github-demo
+---
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: tester
+  catalog: demo-catalog
+  variant: dev
+  description: View for testers - can read, create issues, and manage notifications
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - github.mcp.use
+        - github.read.basic
+        - github.write.code
+        - github.test.manage
+      targets:
+        - res://skillsets/demo-skillsets/github-demo
+---
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: engineering-manager
+  catalog: demo-catalog
+  variant: dev
+  description: View for engineering managers - can read, manage pull requests, content, and administrative tasks
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - github.mcp.use
+        - github.read.basic
+        - github.develop.code
+        - github.content.manage
+        - github.admin.manage
+      targets:
+        - res://skillsets/demo-skillsets/github-demo
+---
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: security-engineer
+  catalog: demo-catalog
+  variant: dev
+  description: View for security engineers - can read, manage security alerts, and workflows
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - github.mcp.use
+        - github.read.basic
+        - github.security.manage
+        - github.workflow.manage
+      targets:
+        - res://skillsets/demo-skillsets/github-demo
+---
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: read-only
+  catalog: demo-catalog
+  variant: dev
+  description: View for read-only access - can only read repositories and content
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - github.mcp.use
+        - github.read.basic
+      targets:
+        - res://skillsets/demo-skillsets/github-demo
+---
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: full-access
+  catalog: demo-catalog
+  variant: dev
+  description: View for full access - can perform all GitHub operations
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - github.mcp.use
+        - github.read.basic
+        - github.write.code
+        - github.develop.code
+        - github.workflow.manage
+        - github.security.manage
+        - github.content.manage
+        - github.admin.manage
+        - github.test.manage
+      targets:
+        - res://skillsets/demo-skillsets/github-demo 

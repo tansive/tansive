@@ -74,15 +74,15 @@ rules:
 
 ## 💡 Why Tansive?
 
-- **Secure Integration**: AI Tools and Agents need context from many systems, but integrating securely across different APIs is challenging. Tansive provides rule-based access control at every interface in your Agent pipeline.
+- **Secure Integration**: AI Tools and Agents need context from many systems, but integrating securely across different APIs is challenging. Tansive provides rules-based access control at every interface in the Agent pipeline.
 
 - **Reduce Operational Burden**: Deploy and manage AI Agents using the same GitOps processes teams use today. Tansive is cloud-agnostic and works across clouds.
 
 - **Chained Actions amplify risk:** When agents and tools call each other, small problems have a large blast radius. Tansive provides audit logs that capture the full tool call graph and policy decisions to help trace and mitigate risks.
 
-- **Defend against Security Vulnerabilities**: AI tools introduce new attack vectors like prompt injections. Tansive provides the tools to implement defense-in-depth security processes to keep your business safe.
+- **Defend against Security Vulnerabilities**: AI tools introduce new attack vectors like prompt injections. Tansive provides the tools to implement defense-in-depth security processes to keep businesses safe.
 
-- **Meet Compliance Requirements**: Companies must meet regulatory requirements (SOC2, HIPAA, PCI, Data Privacy). Tansive provides policy-based control and tamper-evident logs for compliance and audits.
+- **Meet Compliance Requirements**: Systems often have regulatory requirements to meet (SOC2, HIPAA, PCI, Data Privacy). Tansive provides policy-based control and tamper-evident logs for compliance and audits.
 
 ---
 
@@ -95,16 +95,16 @@ rules:
   Enforce fine-grained controls over tool calls. Every invocation is checked against policy in real time.
 
 - **Runtime Constraints and Transforms**  
-  Pin runtime sessions to specific values and apply user-defined transforms to modify or redact inputs to agents and tools. Protect sensitive data (e.g. PII, Health data), apply runtime feature flags, and adapt or enrich inputs to match the expectations of your current systems without undertaking costly data migration initiatives
+  Pin runtime sessions to specific values and apply user-defined transforms to modify or redact inputs to agents and tools. Protect sensitive data (e.g. PII, Health data), apply runtime feature flags, and adapt or enrich inputs to match the expectations of your current systems without undertaking costly data migration initiatives.
 
 - **Tamper-Evident Audit Logging**  
-  Maintain, hash-linked, signed logs of every action for observability, compliance, and forensic analysis.
+  Maintain hash-linked, signed logs of every action for observability, compliance, and forensic analysis.
 
 - **Agents in any framework**  
   Author agents in any framework - LangGraph, CrewAI, Semantic Kernel, etc.
 
 - **Tools in any language**  
-  Author tools in any language. Tansive will run it and create an MCP endpoint with secure HTTP transport.
+  Author tools in any language or import tools from local or external MCP servers. Tansive will run or proxy them and create a policy-governed MCP endpoint with secure HTTP transport.
 
 - **GitOps Friendly**  
   Configure everything via declarative YAML specs version-controlled in Git, modeled on familiar cloud-native patterns.
@@ -268,11 +268,12 @@ At the core of a Tansive session is the Tool Call router. Tools can be added to 
 - **Local MCP Servers:** MCP servers that use `stdio` transport that access external resources via REST API or any other means such as gRPC.
 - **Local Scripts:** Simple run-once-and-exit tools can be written in any language. These tools are run by Tansive with a json argument and the tool prints results to standard output or error.
 
-When a session is created, Tansive automatically creates an MCP endpoint using authenticated HTTP transport. Only the Tools specified by the View policy associated with the session are exposed via the endpoint. Runtime tool input transformations are applied as per policy. All tool calls, their inputs, and policy evaluation decisions and basis are logged.
+When a session is created, Tansive automatically creates an MCP endpoint using authenticated HTTP transport. Only the Tools specified by the View policy associated with the session are exposed via the endpoint. Runtime tool input transformations are applied as per policy. All tool calls, their inputs, and policy evaluation decisions and rules that supported the decision are logged.
 
 Agents can integrate with Tansive in one of two modes:
 
 - Tansive can run the agent directly subjecting it to the same View policies, therefore providing end to end control over the entire pipeline. In this case, the agent accesses tools via the Tansive SkillSet service which uses a Unix Domain Socket as transport. Upcoming releases will add support for Tansive managed agents to access tools via MCP.
+
 - Agents are run independently, but Tansive governs tool access. This mode also covers agents in tools such as Cursor, Claude desktop, etc.
 
 The MCP ecosystem was still evolving when Tansive was being built. The objective of the project is to standardize on MCP for tool access on all modes, and this will be accomplished in the August 2025 release.
@@ -281,7 +282,9 @@ The MCP ecosystem was still evolving when Tansive was being built. The objective
 
 ## 🎬 See it in Action
 
-Below are examples showing how Tansive enforces policies and protects sensitive data:
+If you are using tools like Cursor, Copilot, Claude, etc with MCP servers, [read this article](https://docs.tansive.io/blog/implementing-defense-prompt-injection-attacks-mcp) on how Tansive can be used to defend against Prompt Injection vulnerabilities and inappropriate agent action by configuring use-case or role-based filters.
+
+Below examples show how Tansive enforces policies and protects sensitive data:
 
 **What you'll see**
 
