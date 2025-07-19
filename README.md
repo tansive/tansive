@@ -366,7 +366,7 @@ You can do the following in non-production environments:
 ✅ Deploy interactive agents for real workflows such as analyzing support tickets, restart failed services in dev environment, or validate data before orders are processed.  
 ✅ Enforce policies like "This agent can only access customer data for tier 1 support cases"  
 ✅ Use session pinning to enforce data access controls like "This session can only access prospect data for the current lead"  
-✅ Write simple run-once-and-exit tools in Python, Node.js, Bash or any compiled language. In the current release, these tools are only exposed to Agents via the Tansive SkillSet service - an internal toolcall interface. The next release will export these tools via the managed MCP endpoint.
+✅ Write simple run-once-and-exit tools in Python, Node.js, Bash or any compiled language. In the current release, these tools are only exposed to Agents via the Tansive SkillSet service - an internal toolcall interface. The next release will export these tools via the managed MCP endpoint.  
 ✅ Deploy your agent catalog, write and apply policies declaratively in `yaml`.  
 ✅ Single User only
 
