@@ -18,7 +18,7 @@ Understand and control:
 
 All with full execution graph visibility and audit logs.
 
-Tansive lets developers run AI agents with controlled access to tools — you define what tools each agent can use, and Tansive enforces those rules while logging everything that happens with full tool call traces.
+Tansive lets developers run AI agents with controlled access to tools — you define what tools each agent can use, and Tansive enforces those rules while logging full tool call traces.
 
 For Ops Teams, Tansive provides a `yaml` based control plane for running AI agents and tools with enterprise-grade security and observability.
 
@@ -29,6 +29,7 @@ For Ops Teams, Tansive provides a `yaml` based control plane for running AI agen
 - 💡 [Why Tansive?](#-why-tansive)
 - ✨ [Key Features](#-key-features)
 - 🔧 [How Tansive works](#-how-tansive-works)
+- 🧱 [Architecture](#-architecture)
 - 🎬 [See it in Action](#-see-it-in-action)
 - 📋 [What Works, What's Coming, and What to Expect](#-what-works-whats-coming-and-what-to-expect)
 - 🚀 [Getting Started](#-getting-started)
@@ -168,7 +169,7 @@ rules:
 
 ---
 
-## Architecture
+## 🧱 Architecture
 
 ### Functional Architecture
 
@@ -359,13 +360,13 @@ You can do the following in non-production environments:
 ✅ Deploy policy-based filter and input validation for MCP tools that you use with Cursor, Claude, Windsurf, etc. You can create them under different roles that you can toggle in cursor.
 
 - Only tools with `stdio` transport are supported in this release - which includes a large number of tools. See Roadmap below for other transports.
-- You can write your own MCP tools as well.
+- You can also write your own MCP tools using `stdio` transport and Tansive will run it.
 - Tansive will automatically create an MCP endpoint with secure HTTP transport and bearer token authentication.
 
 ✅ Deploy interactive agents for real workflows such as analyzing support tickets, restart failed services in dev environment, or validate data before orders are processed.  
 ✅ Enforce policies like "This agent can only access customer data for tier 1 support cases"  
 ✅ Use session pinning to enforce data access controls like "This session can only access prospect data for the current lead"  
-✅ Write simple run-once-and-exit tools in Python, Node.js, Bash or any compiled language (binary invocation). These tools are not accessible over MCP in this release. It is supported only via Tansive's internal tool call interface.  
+✅ Write simple run-once-and-exit tools in Python, Node.js, Bash or any compiled language. In the current release, these tools are only exposed to Agents via the Tansive SkillSet service - an internal toolcall interface. The next release will export these tools via the managed MCP endpoint.
 ✅ Deploy your agent catalog, write and apply policies declaratively in `yaml`.  
 ✅ Single User only
 
@@ -373,9 +374,9 @@ You can do the following in non-production environments:
 
 Target: Mid August, 2025:
 
-- All tools - are exported via Tansive's secure MCP endpoint as well as Tansive's internal tool call interface that uses UDS.
-- Add multiple MCP servers in a Tansive SkillSet. This allows one to compose rich workflows combining tools to access multiple systems.
-- Add support for remote MCP servers
+- All tools are exported via Tansive's secure MCP endpoint as well as Tansive's SkillSet interface.
+- Support for multiple MCP servers in one Tansive SkillSet. This allows one to compose rich workflows combining multiple systems.
+- Support for remote MCP servers
 - Better documentation and examples
 
 Target: Mid September, 2025:
@@ -568,7 +569,7 @@ architecture, I purposely built Tansive to be easily extensible. Trust and exten
 
 #### Why should we trust this project now?
 
-Tansive is in early Alpha, and it's not ready for production use. But the foundations - hierarchical organization of agent and tool assets, policy-based views, dynamic runtime control via transforms, language agnostic runtime framework, tamper-evident logs, and extensible Resources and SkillSet abstractions - are designed to enable and sustain wide adoption of agents to automate day to day tasks without compromising on safety and compliance.
+Tansive is in early Alpha, and it's not ready for production use. But the foundations - hierarchical organization of agent and tool assets, policy-based views, dynamic runtime control via transforms, language and framework agnostic runtime, tamper-evident logs, and extensible SkillSet abstractions - are designed to enable and sustain wide adoption of agents to automate day to day tasks without compromising on security and compliance.
 
 I hope you will try Tansive in your non-production environments with real workloads and provide feedback on the problems you face and the capabilities you’d like Tansive to deliver. Your insights will help shape a platform that aspires to become the standard for secure, auditable, agent-driven workflows. Thank you in advance for being part of this journey.
 
