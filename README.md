@@ -260,15 +260,16 @@ This diagram shows how Tansive orchestrates tools, policies, and agents within a
 
 ![Tansive Functional Architecture](media/tansive-functional-arch.svg)
 
-When you create a session, Tansive sets up a runtime instance of the `SkillSet` constrained by the specified `View`. SkillSet is a `yaml` template that specifies all the tools and agents involved in accomplishing a type of job along with information on how to run them, and what `capabilities` they expose. A `View` is a policy that specifies what capabilities are permitted to be used in a session. `Capabilities` are tags such as `kubernetes.deployments.restart`, `query.sql.update`, that you define and can be at any level of granularity.
+When you create a session, Tansive sets up a runtime instance of the "SkillSet" constrained by the specified "View". SkillSet is a `yaml` template that specifies all the tools and agents involved in accomplishing a specific type of task (e.g., placing a order based on availability of inventory) along with information on how to run them, and what capabilities they expose.  
+A "View" is a policy that specifies what capabilities are permitted to be used in a session. Capabilities are expressed via tags such as `kubernetes.deployments.restart`, `query.sql.update`, that you define at your desired level of granularity.
 
 At the core of a Tansive session is the Tool Call router. Tools can be added to the router from various sources:
 
-- **Remote MCP Servers:** MCP endpoints hosted by external resources that use authenticated HTTP Transport
-- **Local MCP Servers:** MCP servers that use `stdio` transport that access external resources via REST API or any other means such as gRPC.
+- **Remote MCP Servers:** MCP endpoints hosted by external resources that use HTTP Transport (Remote MCP)
+- **Local MCP Servers:** MCP servers that use `stdio` transport that access external resources via REST API or any other means such as gRPC. (Local MCP)
 - **Local Scripts:** Simple run-once-and-exit tools can be written in any language. These tools are run by Tansive with a json argument and the tool prints results to standard output or error.
 
-When a session is created, Tansive automatically creates an MCP endpoint using authenticated HTTP transport. Only the Tools specified by the View policy associated with the session are exposed via the endpoint. Runtime tool input transformations are applied as per policy. All tool calls, their inputs, and policy evaluation decisions and rules that supported the decision are logged.
+When a session is created, Tansive automatically creates an MCP endpoint using authenticated HTTP transport. Only the Tools specified by the View policy associated with the session are exposed via the endpoint. The router applies tool input transformations specified in the SkillSet at runtime before tool calls are dispatched. All tool calls, their inputs, and policy evaluation decisions and rules that supported the decision are logged.
 
 Agents can integrate with Tansive in one of two modes:
 
