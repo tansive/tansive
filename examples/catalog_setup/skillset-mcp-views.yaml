@@ -1,0 +1,61 @@
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: support-agent
+  catalog: demo-catalog
+  variant: dev
+  description: View for the support agent
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - supabase.mcp.use
+        - supabase.sql.query
+      targets:
+        - res://skillsets/demo-skillsets/supabase-demo
+---
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: app-developer
+  catalog: demo-catalog
+  variant: dev
+  description: View for the app developer
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - supabase.mcp.use
+        - supabase.sql.query
+        - supabase.deploy.read
+        - supabase.codegen.read
+        - supabase.docs.read
+        - supabase.sql.develop
+        - supabase.project.read
+      targets:
+        - res://skillsets/demo-skillsets/supabase-demo
+---
+apiVersion: 0.1.0-alpha.1
+kind: View
+metadata:
+  name: devops-engineer
+  catalog: demo-catalog
+  variant: dev
+  description: View for the app developer
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - supabase.mcp.use
+        - supabase.sql.query
+        - supabase.deploy.read
+        - supabase.deploy.write
+        - supabase.codegen.read
+        - supabase.docs.read
+        - supabase.sql.devopsadmin
+        - supabase.project.read
+      targets:
+        - res://skillsets/demo-skillsets/supabase-demo

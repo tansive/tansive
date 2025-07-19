@@ -55,11 +55,17 @@ type SkillSetSpec struct {
 }
 
 type SkillSetContext struct {
-	Name       string            `json:"name" validate:"required,resourceNameValidator"`
-	Provider   ResourceProvider  `json:"provider,omitempty" validate:"required_without=Schema,omitempty,resourceNameValidator"`
-	Schema     json.RawMessage   `json:"schema" validate:"required_without=Provider,omitempty,jsonSchemaValidator"`
-	Value      types.NullableAny `json:"value" validate:"omitempty"`
-	Attributes ContextAttributes `json:"attributes" validate:"omitempty"`
+	Name          string                 `json:"name" validate:"required,resourceNameValidator"`
+	Provider      ResourceProvider       `json:"provider,omitempty" validate:"required_without=Schema,omitempty,resourceNameValidator"`
+	Schema        json.RawMessage        `json:"schema" validate:"required_without=Provider,omitempty,jsonSchemaValidator"`
+	Value         types.NullableAny      `json:"value" validate:"omitempty"`
+	ValueByAction []ContextValueByAction `json:"valueByAction" validate:"omitempty,dive"`
+	Attributes    ContextAttributes      `json:"attributes" validate:"omitempty"`
+}
+
+type ContextValueByAction struct {
+	Action policy.Action     `json:"action" validate:"required"`
+	Value  types.NullableAny `json:"value" validate:"required"`
 }
 
 type SkillSetSource struct {
@@ -70,17 +76,18 @@ type SkillSetSource struct {
 
 type Skill struct {
 	Name            string               `json:"name" validate:"required,skillNameValidator"`
-	Description     string               `json:"description" validate:"required"`
+	Description     string               `json:"description"`
 	Source          string               `json:"source" validate:"required"`
-	InputSchema     json.RawMessage      `json:"inputSchema" validate:"required,jsonSchemaValidator"`
-	OutputSchema    json.RawMessage      `json:"outputSchema" validate:"required,jsonSchemaValidator"`
+	InputSchema     json.RawMessage      `json:"inputSchema" validate:"omitempty,jsonSchemaValidator"`
+	OutputSchema    json.RawMessage      `json:"outputSchema" validate:"omitempty,jsonSchemaValidator"`
 	Transform       types.NullableString `json:"transform" validate:"omitempty"`
 	ExportedActions []policy.Action      `json:"exportedActions" validate:"required,dive"`
 	Annotations     map[string]string    `json:"annotations" validate:"omitempty"`
 }
 
 type ContextAttributes struct {
-	Hidden bool `json:"hidden" validate:"omitempty"`
+	ExportedActions []policy.Action `json:"exportedActions" validate:"required,dive"`
+	ReadOnly        bool            `json:"readOnly" validate:"omitempty"`
 }
 
 func (s *Skill) GetExportedActions() []policy.Action {
@@ -88,7 +95,7 @@ func (s *Skill) GetExportedActions() []policy.Action {
 }
 
 func (s *Skill) ValidateInput(input map[string]any) apperrors.Error {
-	if len(s.InputSchema) == 0 {
+	if len(s.InputSchema) == 0 || string(s.InputSchema) == "null" {
 		return nil
 	}
 	schema, err := compileSchema(string(s.InputSchema))
@@ -365,10 +372,28 @@ func (sm *skillSetManager) GetContext(name string) (SkillSetContext, apperrors.E
 	return SkillSetContext{}, ErrObjectNotFound.Msg("context not found")
 }
 
-func (sm *skillSetManager) GetContextValue(name string) (types.NullableAny, apperrors.Error) {
+func (sm *skillSetManager) GetContextValue(name string, viewDef ...*policy.ViewDefinition) (types.NullableAny, apperrors.Error) {
 	ctx, err := sm.GetContext(name)
 	if err != nil {
 		return types.NilAny(), err
+	}
+	if len(ctx.Attributes.ExportedActions) > 0 {
+		if len(viewDef) == 0 {
+			return ctx.Value, nil
+		}
+		for _, action := range ctx.Attributes.ExportedActions {
+			allowed, _, err := policy.AreActionsAllowedOnResource(viewDef[0], sm.GetResourcePath(), []policy.Action{action})
+			if err != nil {
+				return ctx.Value, err
+			}
+			if allowed {
+				for _, valueByAction := range ctx.ValueByAction {
+					if valueByAction.Action == action {
+						return valueByAction.Value, nil
+					}
+				}
+			}
+		}
 	}
 	return ctx.Value, nil
 }
@@ -376,6 +401,9 @@ func (sm *skillSetManager) GetContextValue(name string) (types.NullableAny, appe
 func (sm *skillSetManager) SetContextValue(name string, value types.NullableAny) apperrors.Error {
 	for i, ctx := range sm.skillSet.Spec.Context {
 		if ctx.Name == name {
+			if ctx.Attributes.ReadOnly {
+				return ErrInvalidObject.Msg("context is read only")
+			}
 			if !value.IsNil() {
 				compiledSchema, err := compileSchema(string(ctx.Schema))
 				if err != nil {

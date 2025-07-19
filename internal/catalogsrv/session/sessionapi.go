@@ -13,6 +13,7 @@ import (
 	"github.com/tansive/tansive/internal/catalogsrv/catcommon"
 	"github.com/tansive/tansive/internal/catalogsrv/db"
 	"github.com/tansive/tansive/internal/catalogsrv/db/models"
+	"github.com/tansive/tansive/internal/catalogsrv/tangent"
 	"github.com/tansive/tansive/internal/common/httpx"
 	"github.com/tansive/tansive/internal/common/uuid"
 )
@@ -30,8 +31,10 @@ func newSession(r *http.Request) (*httpx.Response, error) {
 	}
 
 	interactive := r.URL.Query().Get("interactive") == "true"
+	// Until we support a full Tangent-Server SSE connection, we use the user to mediate
+	temp_oauth := true
 	codeChallenge := ""
-	if interactive {
+	if interactive || temp_oauth {
 		//We need to create a oauth2.0 session, so look for a code challenge
 		codeChallenge = r.URL.Query().Get("code_challenge")
 		if codeChallenge == "" {
@@ -46,7 +49,7 @@ func newSession(r *http.Request) (*httpx.Response, error) {
 
 	session.Save(ctx)
 
-	if interactive {
+	if interactive || temp_oauth {
 		log.Ctx(ctx).Info().Msgf("Creating auth code for session %s", session.ID().String())
 		authCode, err := CreateAuthCode(ctx, session, codeChallenge)
 		if err != nil {
@@ -304,6 +307,92 @@ func getSessionSummaryByID(r *http.Request) (*httpx.Response, error) {
 		StatusCode: http.StatusOK,
 		Response:   sessionSummaryInfo,
 	}, nil
+}
+
+// This flow is temporary until we support a full Tangent-Server SSE connection
+func initializeStopSession(r *http.Request) (*httpx.Response, error) {
+	ctx := r.Context()
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		return nil, httpx.ErrInvalidRequest("code is required")
+	}
+	codeVerifier := r.URL.Query().Get("code_verifier")
+	if codeVerifier == "" {
+		return nil, httpx.ErrInvalidRequest("code_verifier is required")
+	}
+
+	authCodeMetadata, err := GetAuthCode(ctx, code, codeVerifier)
+	if err != nil {
+		return nil, ErrNotAuthorized
+	}
+
+	type StopSessionRsp struct {
+		SessionID uuid.UUID `json:"sessionID"`
+	}
+
+	return &httpx.Response{
+		StatusCode: http.StatusOK,
+		Response: &StopSessionRsp{
+			SessionID: authCodeMetadata.SessionID,
+		},
+	}, nil
+
+}
+
+// This flow is temporary until we support a full Tangent-Server SSE connection
+func stopSession(r *http.Request) (*httpx.Response, error) {
+	ctx := r.Context()
+
+	sessionID := chi.URLParam(r, "sessionID")
+	if sessionID == "" {
+		return nil, httpx.ErrInvalidRequest("sessionID is required")
+	}
+
+	sessionUUID, err := uuid.Parse(sessionID)
+	if err != nil {
+		return nil, httpx.ErrInvalidRequest("invalid sessionID")
+	}
+
+	codeChallenge := r.URL.Query().Get("code_challenge")
+	if codeChallenge == "" {
+		return nil, httpx.ErrInvalidRequest("code_challenge is required")
+	}
+
+	session, err := GetSession(ctx, sessionUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	userID := catcommon.GetUserID(ctx)
+	if session.UserID() != userID {
+		return nil, httpx.ErrInvalidRequest("user not authorized to stop session")
+	}
+
+	tangentID := session.TangentID()
+	if tangentID == uuid.Nil {
+		return nil, httpx.ErrInvalidRequest("no tangent found for session")
+	}
+
+	// get the tangent
+	t, err := tangent.GetTangentByID(ctx, tangentID)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Ctx(ctx).Info().Msgf("Creating auth code for session %s", session.ID().String())
+	authCode, err := CreateAuthCode(ctx, session, codeChallenge)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &httpx.Response{
+		StatusCode: http.StatusOK,
+		Response: &InteractiveSessionRsp{
+			Code:       authCode,
+			TangentURL: t.URL,
+		},
+	}
+	return resp, nil
 }
 
 func getAuditLogByID(r *http.Request) (*httpx.Response, error) {

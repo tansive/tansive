@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	"github.com/h2non/filetype"
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/rs/zerolog/log"
 
 	"github.com/mitchellh/mapstructure"
@@ -70,6 +71,17 @@ func New(ctx context.Context, sessionID string, configMap map[string]any, writer
 	}
 
 	return runner, nil
+}
+
+// FetchTools fetches the tools for the runner.
+// We don't support tools for stdio runner. It's handled elsewhere.
+func (r *runner) FetchTools(ctx context.Context) ([]*api.LLMTool, apperrors.Error) {
+	return nil, nil
+}
+
+// RunMCP runs the Skill and returns an MCP style result. We don't support MCP style resultsfor stdio runner.
+func (r *runner) RunMCP(ctx context.Context, args *api.SkillInputArgs) (*mcp.CallToolResult, apperrors.Error) {
+	return nil, nil
 }
 
 // Run executes the configured command.
@@ -335,4 +347,9 @@ func (r *runner) normalizeLineEndings(source, target string) apperrors.Error {
 	}
 
 	return nil
+}
+
+// Stop stops the runner
+func (r *runner) Stop(ctx context.Context) {
+	// TODO: Implement
 }

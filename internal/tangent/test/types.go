@@ -3,6 +3,7 @@ package test
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/tansive/tansive/internal/catalogsrv/policy"
 	"github.com/tidwall/gjson"
@@ -164,8 +165,13 @@ const devView = `
       "intent": "Allow",
       "actions": ["system.skillset.use","kubernetes.pods.list", "kubernetes.deployments.restart", "kubernetes.troubleshoot"],
       "targets": ["res://skillsets/skillsets/kubernetes-demo"]
+    },
+    {
+      "intent": "Allow",
+      "actions": ["system.skillset.use", "supabase.mcp.use", "supabase.tables.list", "supabase.sql.query", "supabase.sql.superuser"],
+      "targets": ["res://skillsets/skillsets/supabase-demo"]
     }]
-  }
+	}
 }`
 
 func GetView(name string) json.RawMessage {
@@ -191,4 +197,165 @@ func GetViewDefinition(variant string) *policy.ViewDefinition {
 	}
 	vd.Rules = rules
 	return &vd
+}
+
+const mcpSkillsetDef = `
+apiVersion: 0.1.0-alpha.1
+kind: SkillSet
+metadata:
+  name: supabase-demo
+  catalog: test-catalog
+  variant: test-variant
+  path: /skillsets
+spec:
+  version: "0.1.0"
+  sources:
+    - name: supabase-mcp-server
+      runner: system.mcp.stdio
+      config:
+        version: "0.1.0"
+        command: npx
+        args:
+          - -y
+          - "@supabase/mcp-server-supabase@latest"
+          # project-ref will be set in code
+        env:
+          # SUPABASE_ACCESS_TOKEN will be set in code
+    - name: sql-validator
+      runner: system.stdiorunner
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "python"
+        script: "validate_sql.py"
+        security:
+          type: default
+  context:
+    - name: sql-permissions
+      schema:
+        type: object
+        properties:
+          allow:
+            type: object
+            additionalProperties:
+              type: array
+              items:
+                type: string
+          deny:
+            type: object
+            additionalProperties:
+              type: array
+              items:
+                type: string
+        required:
+          - allow
+          - deny
+      value:
+        allow:
+          select:
+            - support_tickets
+            - support_messages
+          update:
+            - support_messages
+        deny:
+          all:
+            - integration_tokens
+      valueByAction:
+        - action: supabase.sql.superuser
+          value:
+            allow:
+              all:
+                - support_tickets
+                - support_messages
+                - integration_tokens
+        - action: supabase.sql.query
+          value:
+            deny:
+              all:
+                - integration_tokens
+      attributes: 
+        readOnly: true
+        exportedActions:
+          - supabase.sql.superuser
+          - supabase.sql.query
+  skills:
+    - name: validate_sql
+      source: sql-validator
+      description: Validate SQL input
+      inputSchema:
+        type: object
+        required:
+          - sql
+        properties:
+          sql:
+            type: string
+      outputSchema:
+        type: object
+      exportedActions:
+        - supabase.mcp.use
+    - name: list_tables
+      source: supabase-mcp-server
+      exportedActions:
+        - supabase.tables.list
+    - name: execute_sql
+      source: supabase-mcp-server
+      description: Execute SQL query
+      transform: |
+        function(session, input) {
+          let validationInput = {
+            sql: input.query
+          }
+          let ret = SkillService.invokeSkill("validate_sql", validationInput);
+          // if ret is not an object, throw an error
+          if (typeof ret !== "object") {
+            throw new Error("unable to validate input");
+          }
+          if(!ret.allowed) {
+            throw new Error(ret.reason);
+          }
+          console.log("input validated");
+          console.log(ret);
+          return input;
+        }
+      exportedActions:
+        - supabase.sql.query
+    - name: supabase_mcp
+      source: supabase-mcp-server
+      description: Supabase MCP server
+      exportedActions:
+        - supabase.mcp.use
+      annotations:
+        mcp:tools: filter-tools
+`
+
+func getMCPSkillsetDef(env string) json.RawMessage {
+	jsonData := getJsonFromYaml(mcpSkillsetDef)
+	projectRef := os.Getenv("SUPABASE_PROJECT")
+	accessToken := os.Getenv("SUPABASE_ACCESS_TOKEN")
+
+	// Set the project-ref argument (assuming it's the 4th arg, index 3)
+	if projectRef != "" {
+		jsonData, _ = sjson.SetBytes(jsonData, "spec.sources.0.config.args.3", "--project-ref="+projectRef)
+	}
+
+	// Set the access token in env
+	if accessToken != "" {
+		jsonData, _ = sjson.SetBytes(jsonData, "spec.sources.0.config.env.SUPABASE_ACCESS_TOKEN", accessToken)
+	}
+
+	if env == "prod" {
+		jsonData, _ = sjson.DeleteBytes(jsonData, "spec.skills.2.transform")
+	}
+
+	return jsonData
+}
+
+func MCPSkillsetPath() string {
+	jsonData := getJsonFromYaml(mcpSkillsetDef)
+	name := gjson.Get(string(jsonData), "metadata.name").String()
+	path := gjson.Get(string(jsonData), "metadata.path").String()
+	return fmt.Sprintf("%s/%s", path, name)
+}
+
+func MCPSkillsetAgent() string {
+	return "supabase_mcp"
 }

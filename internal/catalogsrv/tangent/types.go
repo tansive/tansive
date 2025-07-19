@@ -58,3 +58,28 @@ func GetTangentWithCapabilities(ctx context.Context, capabilities []catcommon.Ru
 		},
 	}, nil
 }
+
+func GetTangentByID(ctx context.Context, id uuid.UUID) (*Tangent, apperrors.Error) {
+	tangent, err := db.DB(ctx).GetTangent(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if tangent == nil {
+		return nil, apperrors.New("tangent not found")
+	}
+
+	info := TangentInfo{}
+	goerr := json.Unmarshal(tangent.Info, &info)
+	if goerr != nil {
+		return nil, apperrors.New("failed to unmarshal tangent info: " + goerr.Error())
+	}
+
+	return &Tangent{
+		ID: tangent.ID,
+		TangentInfo: TangentInfo{
+			CreatedBy:    info.CreatedBy,
+			URL:          info.URL,
+			Capabilities: info.Capabilities,
+		},
+	}, nil
+}

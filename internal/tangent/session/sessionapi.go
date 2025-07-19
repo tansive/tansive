@@ -13,6 +13,7 @@ import (
 	"github.com/tansive/tansive/internal/common/apperrors"
 	"github.com/tansive/tansive/internal/common/httpclient"
 	"github.com/tansive/tansive/internal/common/httpx"
+	"github.com/tansive/tansive/internal/common/uuid"
 	"github.com/tansive/tansive/internal/tangent/config"
 	"github.com/tansive/tansive/internal/tangent/tangentcommon"
 )
@@ -37,32 +38,129 @@ func createSession(r *http.Request) (*httpx.Response, error) {
 		return nil, httpx.ErrInvalidRequest("failed to parse request body: " + err.Error())
 	}
 
-	if !req.Interactive {
-		return nil, httpx.ErrInvalidRequest("only interactive sessions are supported")
-	}
+	var rsp *httpx.Response
 
-	session, err := handleInteractiveSession(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	rsp := &httpx.Response{
-		StatusCode:  http.StatusOK,
-		ContentType: "application/x-ndjson",
-		Chunked:     true,
-		WriteChunks: func(w http.ResponseWriter) error {
-			ctx := log.Ctx(ctx).With().Str("session_id", session.id.String()).Logger().WithContext(ctx)
-			return runSession(ctx, w, session)
-		},
+	switch req.SessionType {
+	case tangentcommon.SessionTypeInteractive:
+		return processInteractiveSession(ctx, req)
+	case tangentcommon.SessionTypeMCPProxy:
+		return processMCPProxySession(ctx, req)
 	}
 
 	return rsp, nil
 }
 
-// handleInteractiveSession creates an interactive session from the request.
+// This flow is temporary until we support a full Tangent-Server SSE connection
+func stopSession(r *http.Request) (*httpx.Response, error) {
+	ctx := r.Context()
+
+	if r.Body == nil {
+		return nil, httpx.ErrInvalidRequest("request body is required")
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, httpx.ErrUnableToReadRequest()
+	}
+
+	// We are reusing this
+	req := &tangentcommon.SessionCreateRequest{}
+	if err := json.Unmarshal(body, req); err != nil {
+		return nil, httpx.ErrInvalidRequest("failed to parse request body: " + err.Error())
+	}
+
+	var rsp *httpx.Response
+
+	client := getHTTPClient(&clientConfig{
+		serverURL: config.Config().TansiveServer.GetURL(),
+	})
+
+	opts := httpclient.RequestOptions{
+		Method: http.MethodPost,
+		Path:   "sessions/stop",
+		QueryParams: map[string]string{
+			"code":          req.Code,
+			"code_verifier": req.CodeVerifier,
+		},
+	}
+
+	body, _, err = client.DoRequest(opts)
+	if err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("unable to stop session")
+		return nil, ErrFailedRequestToTansiveServer.Msg("unable to stop session: " + err.Error())
+	}
+
+	stopRsp := map[string]any{}
+	if err := json.Unmarshal(body, &stopRsp); err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("unable to parse stop response")
+		return nil, ErrFailedRequestToTansiveServer.Msg("unable to parse stop response: " + err.Error())
+	}
+
+	sessionIDStr := stopRsp["sessionID"].(string)
+	sessionID, err := uuid.Parse(sessionIDStr)
+	if err != nil || sessionID == uuid.Nil {
+		log.Ctx(ctx).Error().Err(err).Msg("unable to parse session ID")
+		return nil, ErrFailedRequestToTansiveServer.Msg("unable to parse session ID: " + err.Error())
+	}
+
+	if err := processStopSession(ctx, sessionID); err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("unable to stop session")
+		return nil, ErrFailedRequestToTansiveServer.Msg("unable to stop session: " + err.Error())
+	}
+
+	rsp = &httpx.Response{
+		StatusCode: http.StatusOK,
+		Response:   nil,
+	}
+
+	return rsp, nil
+}
+
+// processMCPProxySession creates an MCP proxy session from the request.
+func processMCPProxySession(ctx context.Context, req *tangentcommon.SessionCreateRequest) (rsp *httpx.Response, apperr apperrors.Error) {
+	session, err := resolveSession(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	url, token, err := runMCPProxySession(ctx, session)
+	if err != nil {
+		return nil, err
+	}
+
+	response := map[string]any{
+		"url":   url,
+		"token": token,
+	}
+	rsp = &httpx.Response{
+		StatusCode: http.StatusCreated,
+		Location:   url,
+		Response:   response,
+	}
+	return rsp, nil
+}
+
+// processInteractiveSession creates an interactive session from the request.
+func processInteractiveSession(ctx context.Context, req *tangentcommon.SessionCreateRequest) (rsp *httpx.Response, apperr apperrors.Error) {
+	session, err := resolveSession(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	rsp = &httpx.Response{
+		StatusCode:  http.StatusOK,
+		ContentType: "application/x-ndjson",
+		Chunked:     true,
+		WriteChunks: func(w http.ResponseWriter) error {
+			ctx := log.Ctx(ctx).With().Str("session_id", session.id.String()).Logger().WithContext(ctx)
+			return runInteractiveSession(ctx, w, session)
+		},
+	}
+	return rsp, nil
+}
+
+// resolveSession creates an interactive session from the request.
 // Retrieves execution state from the catalog server and creates an active session.
 // Returns the created session and any error encountered during creation.
-func handleInteractiveSession(ctx context.Context, req *tangentcommon.SessionCreateRequest) (*session, apperrors.Error) {
+func resolveSession(ctx context.Context, req *tangentcommon.SessionCreateRequest) (*session, apperrors.Error) {
 	client := getHTTPClient(&clientConfig{
 		serverURL: config.Config().TansiveServer.GetURL(),
 	})
@@ -94,7 +192,7 @@ func handleInteractiveSession(ctx context.Context, req *tangentcommon.SessionCre
 	}
 
 	ctx = log.Ctx(ctx).With().Str("session_id", executionState.SessionID.String()).Logger().WithContext(ctx)
-	session, apperr := createActiveSession(ctx, executionState, rsp.Token, rsp.Expiry)
+	session, apperr := createActiveSession(ctx, executionState, rsp.Token, rsp.Expiry, req.SessionType)
 	if apperr != nil {
 		log.Ctx(ctx).Error().Err(apperr).Msg("unable to create active session")
 		return nil, apperr
@@ -144,7 +242,7 @@ func getExecutionState(ctx context.Context, rsp *srvsession.SessionTokenRsp) (*s
 // createActiveSession creates an active session from execution state.
 // Converts execution state to server context and creates a session in the session manager.
 // Returns the created session and any error encountered during creation.
-func createActiveSession(ctx context.Context, executionState *srvsession.ExecutionState, token string, tokenExpiry time.Time) (*session, apperrors.Error) {
+func createActiveSession(ctx context.Context, executionState *srvsession.ExecutionState, token string, tokenExpiry time.Time, sessionType tangentcommon.SessionType) (*session, apperrors.Error) {
 	serverCtx := &ServerContext{
 		SessionID:        executionState.SessionID,
 		SkillSet:         executionState.SkillSet,
@@ -159,7 +257,7 @@ func createActiveSession(ctx context.Context, executionState *srvsession.Executi
 		TenantID:         executionState.TenantID,
 	}
 
-	session, err := ActiveSessionManager().CreateSession(ctx, serverCtx, token, tokenExpiry)
+	session, err := ActiveSessionManager().CreateSession(ctx, serverCtx, token, tokenExpiry, sessionType)
 	if err != nil {
 		log.Ctx(ctx).Error().Err(err).Msg("unable to create session")
 		return nil, err
@@ -168,10 +266,10 @@ func createActiveSession(ctx context.Context, executionState *srvsession.Executi
 	return session, nil
 }
 
-// runSession executes a session and streams results to the HTTP response.
+// runInteractiveSession executes a session and streams results to the HTTP response.
 // Initializes audit logging, subscribes to event streams, and runs the session.
 // Returns any error encountered during session execution.
-func runSession(ctx context.Context, w http.ResponseWriter, session *session) (apperr apperrors.Error) {
+func runInteractiveSession(ctx context.Context, w http.ResponseWriter, session *session) (apperr apperrors.Error) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		log.Ctx(ctx).Error().Msg("response writer does not support flushing")
@@ -182,6 +280,7 @@ func runSession(ctx context.Context, w http.ResponseWriter, session *session) (a
 
 	auditLogCtx, cancelAuditLog := context.WithCancel(context.Background())
 	defer cancelAuditLog()
+	session.auditLogInfo.auditLogCancel = cancelAuditLog
 
 	apperr = InitAuditLog(auditLogCtx, session)
 	if apperr != nil {
@@ -246,5 +345,48 @@ func runSession(ctx context.Context, w http.ResponseWriter, session *session) (a
 
 	log.Ctx(ctx).Info().Msg("session completed")
 
+	return nil
+}
+
+func runMCPProxySession(ctx context.Context, session *session) (url string, token string, apperr apperrors.Error) {
+	auditLogCtx, cancelAuditLog := context.WithCancel(context.Background())
+	session.auditLogInfo.auditLogCancel = cancelAuditLog
+	defer func() {
+		if apperr != nil {
+			session.auditLogInfo.auditLogCancel()
+		}
+	}()
+
+	apperr = InitAuditLog(auditLogCtx, session)
+	if apperr != nil {
+		log.Ctx(ctx).Error().Err(apperr).Msg("unable to initialize audit log")
+	}
+
+	// Run will block until the session is complete
+	session.auditLogInfo.auditLogger.Info().
+		Str("event", "session_start").
+		Any("session_variables", session.context.SessionVariables).
+		Msg("starting session")
+
+	log.Ctx(ctx).Info().Str("skill", session.context.Skill).Msg("running session")
+
+	url, token, apperr = session.RunMCPProxy(ctx, "", session.context.Skill, session.context.InputArgs)
+	if apperr != nil {
+		log.Ctx(ctx).Error().Err(apperr).Msg("session failed")
+		session.auditLogInfo.auditLogger.Error().Str("event", "session_end").Err(apperr).Msg("session failed")
+		return "", "", apperr
+	}
+
+	log.Ctx(ctx).Info().Msg("session started")
+	return url, token, nil
+}
+
+func processStopSession(ctx context.Context, sessionID uuid.UUID) apperrors.Error {
+	session, err := ActiveSessionManager().GetSession(sessionID)
+	if err != nil {
+		return err
+	}
+	session.Stop(ctx, nil)
+	ActiveSessionManager().DeleteSession(sessionID)
 	return nil
 }

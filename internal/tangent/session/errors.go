@@ -78,4 +78,12 @@ var (
 	// ErrTransformUndefined is returned when a transform is referenced but not defined.
 	// Occurs when a skill references a transform that is not available or properly configured.
 	ErrTransformUndefined apperrors.Error = ErrSessionError.New("transform is undefined").SetStatusCode(http.StatusBadRequest)
+
+	// ErrSkillNotMCP is returned when a skill is not an MCP server.
+	// Occurs when a skill is not annotated with the MCP type.
+	ErrSkillNotMCP apperrors.Error = ErrSessionError.New("skill is not an MCP server").SetStatusCode(http.StatusBadRequest)
+
+	// ErrInvalidInput is returned when the input arguments are invalid.
+	// Occurs when the input arguments are not a map[string]any.
+	ErrInvalidInput apperrors.Error = ErrSessionError.New("invalid input arguments").SetStatusCode(http.StatusBadRequest)
 )

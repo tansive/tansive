@@ -18,6 +18,7 @@ type auditLogInfo struct {
 	auditLogger      zerolog.Logger
 	auditLogComplete chan string
 	auditLogPubKey   []byte
+	auditLogCancel   context.CancelFunc
 }
 
 // GetAuditLogPath generates the file path for a session's audit log.
@@ -48,6 +49,7 @@ func InitAuditLog(ctx context.Context, session *session) apperrors.Error {
 	auditLog, unsubAuditLog := GetEventBus().Subscribe(session.getTopic(TopicAuditLog), 100)
 
 	finalizeLog := func() {
+		//TODO: Need to fix this. This log won't be written
 		session.auditLogInfo.auditLogger.Info().
 			Str("tangent_id", config.GetRuntimeConfig().TangentID.String()).
 			Str("tangent_url", config.GetURL()).

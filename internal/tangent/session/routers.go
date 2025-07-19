@@ -21,6 +21,11 @@ var resourceObjectHandlers = []ResponseHandlerParam{
 		Path:    "/",
 		Handler: createSession,
 	},
+	{
+		Method:  http.MethodDelete,
+		Path:    "/",
+		Handler: stopSession,
+	},
 }
 
 // Router sets up HTTP routes for session management.

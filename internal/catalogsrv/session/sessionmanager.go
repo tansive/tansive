@@ -14,6 +14,8 @@ import (
 
 type SessionManager interface {
 	ID() uuid.UUID
+	UserID() string
+	TangentID() uuid.UUID
 	Save(ctx context.Context) apperrors.Error
 	GetViewManager(ctx context.Context) (policy.ViewManager, apperrors.Error)
 	GetExecutionState(ctx context.Context) *ExecutionState
@@ -24,6 +26,14 @@ type SessionManager interface {
 
 func (s *sessionManager) ID() uuid.UUID {
 	return s.session.SessionID
+}
+
+func (s *sessionManager) UserID() string {
+	return s.session.UserID
+}
+
+func (s *sessionManager) TangentID() uuid.UUID {
+	return s.session.TangentID
 }
 
 func (s *sessionManager) GetViewManager(ctx context.Context) (policy.ViewManager, apperrors.Error) {

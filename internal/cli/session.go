@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -11,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	srvsession "github.com/tansive/tansive/internal/catalogsrv/session"
 	"github.com/tansive/tansive/internal/common/httpclient"
@@ -88,8 +88,11 @@ Examples:
 			return fmt.Errorf("failed to marshal request body: %v", err)
 		}
 
-		// Generate code verifier (UUID) and challenge
-		codeVerifier := uuid.New().String()
+		// Generate code verifier (high-entropy random) and challenge
+		codeVerifier, err := generateCodeVerifier()
+		if err != nil {
+			return fmt.Errorf("failed to generate code verifier: %v", err)
+		}
 		hashed := sha256.Sum256([]byte(codeVerifier))
 		codeChallenge := base64.RawURLEncoding.EncodeToString(hashed[:])
 
@@ -98,7 +101,7 @@ Examples:
 			Path:   "sessions",
 			Body:   bodyBytes,
 			QueryParams: map[string]string{
-				"interactive":    "true",
+				"interactive":    fmt.Sprintf("%v", interactive),
 				"code_challenge": codeChallenge,
 			},
 		}
@@ -112,16 +115,70 @@ Examples:
 		if err := json.Unmarshal(body, &response); err != nil {
 			return fmt.Errorf("failed to parse response: %v", err)
 		}
+
+		if interactive {
+			req := &tangentcommon.SessionCreateRequest{
+				SessionType:  tangentcommon.SessionTypeInteractive,
+				Code:         response.Code,
+				CodeVerifier: codeVerifier,
+			}
+			err = createSession(req, response.TangentURL)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}
+
 		req := &tangentcommon.SessionCreateRequest{
-			Interactive:  true,
+			SessionType:  tangentcommon.SessionTypeMCPProxy,
 			Code:         response.Code,
 			CodeVerifier: codeVerifier,
 		}
-		err = createSession(req, response.TangentURL)
+		tangentConfig := TangentConfig{
+			ServerURL: response.TangentURL,
+		}
+		client = httpclient.NewClient(&tangentConfig)
+		reqJSON, err := json.Marshal(req)
+		if err != nil {
+			return fmt.Errorf("failed to marshal request: %v", err)
+		}
+
+		opts = httpclient.RequestOptions{
+			Method: http.MethodPost,
+			Path:   "/sessions",
+			Body:   reqJSON,
+		}
+
+		body, _, err = client.DoRequest(opts)
 		if err != nil {
 			return err
 		}
+		var rsp map[string]any
+		if err := json.Unmarshal(body, &rsp); err != nil {
+			return fmt.Errorf("failed to parse response: %v", err)
+		}
+		url := rsp["url"].(string)
+		token := rsp["token"].(string)
 
+		if jsonOutput {
+			output := map[string]any{
+				"result": 1,
+				"value": map[string]any{
+					"mcp_endpoint": url,
+					"access_token": token,
+				},
+			}
+			jsonBytes, err := json.MarshalIndent(output, "", "    ")
+			if err != nil {
+				return fmt.Errorf("failed to format JSON output: %v", err)
+			}
+			fmt.Println(string(jsonBytes))
+		} else {
+			fmt.Println("Session created. MCP endpoint:")
+			fmt.Println(url)
+			fmt.Println("Access token: ", token)
+		}
 		return nil
 	},
 }
@@ -310,6 +367,96 @@ Examples:
 	},
 }
 
+// stopSessionCmd represents the stop subcommand
+var stopSessionCmd = &cobra.Command{
+	Use:   "stop SESSION_ID [flags]",
+	Short: "Stop a session in the Catalog",
+	Long: `Stop a session in the Catalog by its ID. This will terminate the session and clean up resources.
+
+Examples:
+  # Stop a specific session
+tansive session stop 123e4567-e89b-12d3-a456-426614174000
+
+  # Stop a session and output in JSON format
+tansive session stop 123e4567-e89b-12d3-a456-426614174000 -j`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		sessionID := args[0]
+		client := httpclient.NewClient(GetConfig())
+
+		// Generate code verifier (high-entropy random) and challenge
+		codeVerifier, err := generateCodeVerifier()
+		if err != nil {
+			return fmt.Errorf("failed to generate code verifier: %v", err)
+		}
+		hashed := sha256.Sum256([]byte(codeVerifier))
+		codeChallenge := base64.RawURLEncoding.EncodeToString(hashed[:])
+
+		// Step 1: Request stop from the catalog server (DELETE)
+		opts := httpclient.RequestOptions{
+			Method: http.MethodDelete,
+			Path:   "sessions/" + sessionID,
+			QueryParams: map[string]string{
+				"code_challenge": codeChallenge,
+			},
+		}
+
+		body, _, err := client.DoRequest(opts)
+		if err != nil {
+			return err
+		}
+
+		var response srvsession.InteractiveSessionRsp
+		if err := json.Unmarshal(body, &response); err != nil {
+			return fmt.Errorf("failed to parse response: %v", err)
+		}
+
+		// Step 2: Send stop request to the tangent (DELETE)
+		req := &tangentcommon.SessionCreateRequest{
+			SessionType:  tangentcommon.SessionTypeInteractive, // SessionType is not used for stop, but keep for consistency
+			Code:         response.Code,
+			CodeVerifier: codeVerifier,
+		}
+		tangentConfig := TangentConfig{
+			ServerURL: response.TangentURL,
+		}
+		client = httpclient.NewClient(&tangentConfig)
+		reqJSON, err := json.Marshal(req)
+		if err != nil {
+			return fmt.Errorf("failed to marshal request: %v", err)
+		}
+
+		opts = httpclient.RequestOptions{
+			Method: http.MethodDelete,
+			Path:   "/sessions",
+			Body:   reqJSON,
+		}
+
+		_, _, err = client.DoRequest(opts)
+		if err != nil {
+			return err
+		}
+
+		if jsonOutput {
+			output := map[string]any{
+				"result": 1,
+				"value": map[string]any{
+					"status":     "stopped",
+					"session_id": sessionID,
+				},
+			}
+			jsonBytes, err := json.MarshalIndent(output, "", "    ")
+			if err != nil {
+				return fmt.Errorf("failed to format JSON output: %v", err)
+			}
+			fmt.Println(string(jsonBytes))
+		} else {
+			fmt.Printf("Session %s stopped successfully.\n", sessionID)
+		}
+		return nil
+	},
+}
+
 // formatTimestampInLocalTimezone formats a timestamp in local timezone
 // It handles the case where the timestamp might already be in local timezone
 func formatTimestampInLocalTimezone(t time.Time) string {
@@ -319,10 +466,21 @@ func formatTimestampInLocalTimezone(t time.Time) string {
 	return t.Local().Format("2006-01-02 15:04:05 MST")
 }
 
+// generateCodeVerifier generates a high-entropy cryptographically random code verifier for PKCE
+func generateCodeVerifier() (string, error) {
+	b := make([]byte, 32) // 32 bytes = 256 bits
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
 var (
 	sessionVarsStr string
 	inputArgsStr   string
 	viewName       string
+	interactive    bool
 )
 
 // init initializes the session command and its subcommands
@@ -331,9 +489,11 @@ func init() {
 	sessionCmd.AddCommand(createSessionCmd)
 	sessionCmd.AddCommand(listSessionsCmd)
 	sessionCmd.AddCommand(describeSessionCmd)
+	sessionCmd.AddCommand(stopSessionCmd)
 
 	createSessionCmd.Flags().StringVar(&viewName, "view", "", "Name of the view to use (required)")
 	createSessionCmd.MarkFlagRequired("view")
 	createSessionCmd.Flags().StringVar(&sessionVarsStr, "session-vars", "", "JSON string of session variables")
 	createSessionCmd.Flags().StringVar(&inputArgsStr, "input-args", "", "JSON string of input arguments")
+	createSessionCmd.Flags().BoolVar(&interactive, "interactive", false, "Set interactive mode for the session (default: false)")
 }
