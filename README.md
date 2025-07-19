@@ -20,7 +20,32 @@ All with full execution graph visibility and audit logs.
 
 Tansive lets developers run AI agents with controlled access to tools — you define what tools each agent can use, and Tansive enforces those rules while logging full tool call traces.
 
+```bash
+$ tansive session create /skillsets/tools/deployment-tools --view devops-engineer
+Session created. MCP endpoint:
+https://127.0.0.1:8627/session/mcp
+Access token: tn_7c2e4e0162df66d929666703dc67a87a
+```
+
 For Ops Teams, Tansive provides a `yaml` based control plane for running AI agents and tools with enterprise-grade security and observability.
+
+```yaml
+#This example specifies Allow/Deny rules for a Kubernetes troubleshooter agent
+spec:
+rules:
+  - intent: Allow
+    actions:
+      - system.skillset.use
+      - kubernetes.pods.list
+      - kubernetes.troubleshoot
+    targets:
+      - res://skillsets/agents/kubernetes-agent
+  - intent: Deny
+    actions:
+      - kubernetes.deployments.restart
+    targets:
+      - res://skillsets/agents/kubernetes-agent
+```
 
 ---
 
@@ -101,12 +126,14 @@ Tansive lets developers run AI agents with controlled access to tools — you de
 
 - Run multiple concurrent sessions with different policies — Create a template with a collection tools and agents tagged with _Capability_ tags, then create filters based on those tags to control what each session can do. In Tansive, a collection of tools and agents that can together accomplish a type of job is called a `SkillSet`. Policies are called `Views`.
 
+<details> <summary>Examples: Create tool and agent sessions</summary>
+
 e.g., You can create secure MCP endpoints for different roles to configure tools such as cursor.
 
 ```bash
 $ tansive session create /skillsets/tools/deployment-tools --view devops-engineer
 Session created. MCP endpoint:
-http://127.0.0.1:8627/session/mcp
+https://127.0.0.1:8627/session/mcp
 Access token: tn_7c2e4e0162df66d929666703dc67a87a
 
 ```
@@ -125,6 +152,8 @@ bloodwork and tell me if there is anything wrong?","model":"claude"}' \
 
 ```
 
+</details>
+
 #### For DevOps Engineers:
 
 Tansive provides a `yaml` based control plane for running AI agents and tools with enterprise-grade security and observability.
@@ -136,25 +165,90 @@ Tansive provides a `yaml` based control plane for running AI agents and tools wi
 - Run your tools and agents across different VPCs depending on systems they need to access.
 - Deploy and manage AI Agents using your existing CI/CD processes.
 
-  e.g., You can define policies like this:
+<details> <summary>Example `yaml` definition of a SkillSet</summary>
 
 ```yaml
-#This example specifies Allow/Deny rules for a Kubernetes troubleshooter agent
 spec:
-rules:
-  - intent: Allow
-    actions:
-      - system.skillset.use
-      - kubernetes.pods.list
-      - kubernetes.troubleshoot
-    targets:
-      - res://skillsets/agents/kubernetes-agent
-  - intent: Deny
-    actions:
-      - kubernetes.deployments.restart
-    targets:
-      - res://skillsets/agents/kubernetes-agent
+  version: "0.1.0"
+  sources:
+    - name: resolve-patient-id
+      runner: "system.stdiorunner"
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "node"
+        script: "resolve-patient-id.js"
+        security:
+          type: default # could be one of: default, sandboxed
+    - name: patient-bloodwork
+      runner: "system.stdiorunner"
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "python"
+        script: "patient_bloodwork.py"
+        security:
+          type: default # could be one of: default, sandboxed
+    - name: agent-script
+      runner: "system.stdiorunner"
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "python"
+        script: "run-llm.py"
+        security:
+          type: default # could be one of: default, sandboxed
+  context:
+    - name: claude
+      schema:
+        type: object
+        properties:
+          apiKey:
+            type: string
+          model:
+            type: string
+        required:
+          - apiKey
+          - model
+      value:
+        apiKey: { { .ENV.CLAUDE_API_KEY } }
+        model: claude-3-7-sonnet-latest
+    - name: gpt4o
+      schema:
+        type: object
+        properties:
+          apiKey:
+            type: string
+          model:
+            type: string
+        required:
+          - apiKey
+          - model
+      value:
+        apiKey: { { .ENV.OPENAI_API_KEY } }
+        model: gpt-4o
+  skills:
+    - name: resolve-patient-id
+      source: resolve-patient-id
+      description: "Resolve patient ID"
+      inputSchema:
+        type: object
+        properties:
+          name:
+            type: string
+            description: "Patient name"
+        required:
+          - name
+      outputSchema:
+        type: string
+        description: "Patient ID"
+      exportedActions:
+        - patient.id.resolve
+      annotations:
+        llm:description: |
+          Resolve the patient ID from the patient's name.
+          This skill is used to resolve the patient ID from the patient's name.
+          It requires the patient name as input and will return the patient ID in json.
 ```
+
+</details>
 
 ---
 
