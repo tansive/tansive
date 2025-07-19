@@ -99,21 +99,12 @@ Tansive lets developers run AI agents with controlled access to tools — you de
   - Let Tansive run your tools written in Python, Node, Go, etc. Tansive will automatically create an MCP endpoint for your tools with authenticated HTTP transport, so you don't have to manage tokens and authorization.
   - You can also have Tansive run your agent code directly. When you do, the agent will be subject to the same policy and runtime access constraints, giving you end-to-end control over the agent.
 
-- Run multiple concurrent sessions with different policies — Create workflow templates with tools and agents tagged with _Capability_ tags, then create filters based on those tags to control what each session can do.
-
-<details> <summary>Examples: Create tool and agent sessions</summary>
+- Run multiple concurrent sessions with different policies — Create a template with a collection tools and agents tagged with _Capability_ tags, then create filters based on those tags to control what each session can do. In Tansive, a collection of tools and agents that can together accomplish a type of job is called a `SkillSet`. Policies are called `Views`.
 
 e.g., You can create secure MCP endpoints for different roles to configure tools such as cursor.
 
-```
+```bash
 $ tansive session create /skillsets/tools/deployment-tools --view devops-engineer
-
-# Workflow templates are called 'SkillSets' in Tansive,
-# and a policy scope is called a 'View'.
-# This command will create a new session for `deployment-tools`
-# SkillSet with `devops-engineer` policy.
-# Tansive will provide a response like this:
-
 Session created. MCP endpoint:
 http://127.0.0.1:8627/session/mcp
 Access token: tn_7c2e4e0162df66d929666703dc67a87a
@@ -127,14 +118,12 @@ $ tansive session create /skillsets/agents/health-record-agent \
 --view prod-view \
 --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their
 bloodwork and tell me if there is anything wrong?","model":"claude"}' \
---session-vars '{"patient_id":"H12345"}'
+--session-vars '{"patient_id":"H12345"}' --interactive
 
 # This agent session runs the agent bot with the provided prompt. We scoped the session to John's patient_id
 # so while the agent can access John's data, it cannot access Sheila's.
 
 ```
-
-</details>
 
 #### For DevOps Engineers:
 
@@ -147,7 +136,6 @@ Tansive provides a `yaml` based control plane for running AI agents and tools wi
 - Run your tools and agents across different VPCs depending on systems they need to access.
 - Deploy and manage AI Agents using your existing CI/CD processes.
 
-<details> <summary>Example Policy in YAML</summary>
   e.g., You can define policies like this:
 
 ```yaml
@@ -167,8 +155,6 @@ rules:
     targets:
       - res://skillsets/agents/kubernetes-agent
 ```
-
-</details>
 
 ---
 
