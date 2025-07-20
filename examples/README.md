@@ -4,9 +4,28 @@ In this guide, we'll walk through the steps of how to create an role-based acces
 
 Tansive allows you to assign _Capability_ tags for Skills. Views can then be created based on Allow/Deny rules expressed in terms of capabilities.
 
-Below are two examples of how to use Tansive to create a fine-grained RBAC system on top of MCP tools.
+Below are two examples of how to use Tansive to create a fine-grained RBAC system on top of MCP tools - Supabase MCP Server and Github MCP Server.
 
 When creating policy based tool filters, it is not necessary to always think in terms of roles. It could also be use-case driven, workflow driven, or environment (dev, stage, etc) specific policies.
+
+## Table of Contents
+
+- [Supabase](#supabase)
+  - [Capabilities and Tools](#capabilities-and-tools)
+  - [Roles and Permissions](#roles-and-permissions)
+    - [Support Agent](#support-agent)
+    - [App Developer](#app-developer)
+    - [DevOps Engineer](#devops-engineer)
+- [GitHub](#github)
+  - [Capabilities and Tools](#capabilities-and-tools-1)
+  - [Roles and Permissions](#roles-and-permissions-1)
+    - [Developer](#developer)
+    - [DevOps Engineer](#devops-engineer-1)
+    - [Tester](#tester)
+    - [Engineering Manager](#engineering-manager)
+    - [Security Engineer](#security-engineer)
+    - [Read-Only](#read-only)
+    - [Full Access](#full-access)
 
 ## Supabase
 
@@ -225,6 +244,6 @@ tansive create -f catalog_setup/skillset-github-views.yaml -v dev
 # create a session using a 'developer' view.
 tansive session create /demo-skillsets/github-demo/github-mcp-server --view developer
 
-# you should get an MCP endpoint and Access token
+# tansive will return an MCP endpoint and Access token
 
 ```
