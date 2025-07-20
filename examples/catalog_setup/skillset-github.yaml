@@ -1,10 +1,8 @@
 apiVersion: 0.1.0-alpha.1
 kind: SkillSet
 metadata:
-  name: github-demo
-  catalog: test-catalog
-  variant: test-variant
-  path: /demo-skillsets
+  name: github-mcp
+  path: /secure-mcp-servers
 spec:
   version: "0.1.0"
   sources:

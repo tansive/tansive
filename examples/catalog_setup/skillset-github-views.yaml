@@ -31,7 +31,7 @@ spec:
         - github.write.code
         - github.develop.code
       targets:
-        - res://skillsets/demo-skillsets/github-demo
+        - res://skillsets/secure-mcp-servers/github-mcp
 ---
 apiVersion: 0.1.0-alpha.1
 kind: View
@@ -51,7 +51,7 @@ spec:
         - github.security.manage
         - github.admin.manage
       targets:
-        - res://skillsets/demo-skillsets/github-demo
+        - res://skillsets/secure-mcp-servers/github-mcp
 ---
 apiVersion: 0.1.0-alpha.1
 kind: View
@@ -70,7 +70,7 @@ spec:
         - github.write.code
         - github.test.manage
       targets:
-        - res://skillsets/demo-skillsets/github-demo
+        - res://skillsets/secure-mcp-servers/github-mcp
 ---
 apiVersion: 0.1.0-alpha.1
 kind: View
@@ -90,7 +90,7 @@ spec:
         - github.content.manage
         - github.admin.manage
       targets:
-        - res://skillsets/demo-skillsets/github-demo
+        - res://skillsets/secure-mcp-servers/github-mcp
 ---
 apiVersion: 0.1.0-alpha.1
 kind: View
@@ -109,7 +109,7 @@ spec:
         - github.security.manage
         - github.workflow.manage
       targets:
-        - res://skillsets/demo-skillsets/github-demo
+        - res://skillsets/secure-mcp-servers/github-mcp
 ---
 apiVersion: 0.1.0-alpha.1
 kind: View
@@ -126,7 +126,7 @@ spec:
         - github.mcp.use
         - github.read.basic
       targets:
-        - res://skillsets/demo-skillsets/github-demo
+        - res://skillsets/secure-mcp-servers/github-mcp
 ---
 apiVersion: 0.1.0-alpha.1
 kind: View
@@ -150,4 +150,4 @@ spec:
         - github.admin.manage
         - github.test.manage
       targets:
-        - res://skillsets/demo-skillsets/github-demo 
+        - res://skillsets/secure-mcp-servers/github-mcp 
