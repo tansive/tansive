@@ -289,7 +289,11 @@ Agents can integrate with Tansive in one of two modes:
 
 ## 🎬 See it in Action
 
-If you are using tools like Cursor, Copilot, Claude, etc with MCP servers such as Github's, [read this article](https://docs.tansive.io/blog/implementing-defense-prompt-injection-attacks-mcp) on how Tansive can be used to set up use-case or role based policies to defend against Prompt Injection vulnerabilities and inappropriate agent action.
+### Policy-governed secure MCP tools proxy for IDEs such as Cursor, Copilot, Claude, etc
+
+If you are using tools like Cursor, Copilot, Claude, etc with MCP servers such as Github's, [read this article](https://docs.tansive.io/blog/implementing-defense-prompt-injection-attacks-mcp) on how Tansive can be used to set up use-case or role based policies to defend against unintended agent actions or prompt injection vulnerabilities.
+
+### Examples of secure, policy-driven agents
 
 Below examples show how Tansive enforces policies and protects sensitive data:
 
@@ -524,6 +528,8 @@ Target: Mid September, 2025:
 
 ### Installation
 
+🕒 Total time: 5-7 minutes
+
 #### Prerequisites
 
 - Latest stable version of Docker desktop or Docker Engine [🔗](https://www.docker.com/get-started/)
@@ -534,7 +540,8 @@ Target: Mid September, 2025:
     - Tansive CLI client is supported natively. Git Bash or WSL2 is recommended.
     - Tansive Server and Runtime are supported under WSL2
   - Docker containers
-- An OpenAI or Anthropic API key is required to run the examples.
+- There are no additional requirements for running the policy-governed MCP proxy example.
+- An OpenAI or Anthropic API key is required to run the agent examples.
   - The example scripts use the OpenAI Python SDK.
   - Each run consumes approximately 10,000 input tokens and 1,000 output tokens.
 - No API key? No Problem. Sample real output is provided, so you can follow along without running the examples.
@@ -542,8 +549,6 @@ Target: Mid September, 2025:
 Have questions or need help? [Post your question here](https://github.com/tansive/tansive/discussions/categories/need-help-getting-started-with-tansive)
 
 #### Installation Steps
-
-🕒 Total time: 5-7 minutes
 
 #### **1. Clone the Tansive repository:**
 
