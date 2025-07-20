@@ -732,6 +732,8 @@ CLAUDE_API_KEY="<your-claude-key-here>"
 OPENAI_API_KEY="<your-openai-key-here>"
 # don't modify this. you don't need a kubernetes cluster!
 KUBECONFIG="YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgogIC0gbmFtZTogbXktY2x1c3RlcgogICAgY2x1c3RlcjoKICAgICAgc2VydmVyOiBodHRwczovL2Rldi1lbnYuZXhhbXBsZS5jb20KICAgICAgY2VydGlmaWNhdG9yaXR5LWRhdGE6IDxiYXNlNjQtZW5jb2RlZC1jYS1jZXJ0Pg=="
+GITHUB_TOKEN="your-token-here"
+GITHUB_CMD="/path/to/your/downloaded/github-mcp-server"
 EOF
 ```
 
@@ -791,16 +793,9 @@ tar -xvf github-mcp-server_Linux_x86_64.tar.gz
 
 > Note: Tansive can run docker distributions. However, in this setup we are running Tansive itself in docker, and therefore running an MCP server packaged in docker would involve DIND or mounting the docker UDS.
 
-Set up the .env file:
+Open the `.env` file in your favorite editor and replace the placeholder value GITHUB_TOKEN with your actual access token created from your Github personal settings. Replace placeholder value for GITHUB_CMD with the full path to github-mcp-server binary that your downloaded in the previous step.
 
 ```bash
-# Run the following command at the project root
-# Provide a Github access token created from your Github personal settings.
-# Provide full path to github-mcp-server binary that you downloaded in the previous step
-
-echo 'GITHUB_TOKEN="your-token-here"' >> .env
-echo 'GITHUB_CMD="/path/to/your/downloaded/github-mcp-server"' >> .env
-
 # Run the setup script again to update the resources
 bash examples/catalog_setup/setup.sh
 
@@ -825,7 +820,7 @@ In this example, you'll simulate an agent solving a Kubernetes incident. You'll 
 
 <details><summary>Click to expand instructions</summary>
 
-Before running this example, you have to configure an access token
+Before running this example, you have to configure an API Key for either OpenAI or Anthropic. Open the .env file and replace the placeholder with the API Key.
 
 **Scenario**
 
