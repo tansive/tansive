@@ -16,14 +16,16 @@ type JSFunction struct {
 
 // Options for controlling execution
 type Options struct {
-	Timeout time.Duration // max execution time
+	Timeout      time.Duration // max execution time
+	SkillInvoker SkillInvoker
 }
+
+type SkillInvoker func(skillName string, inputArgs map[string]any) ([]byte, apperrors.Error)
 
 // New creates a JSFunction from a JS function source string.
 func New(ctx context.Context, jsCode string) (*JSFunction, apperrors.Error) {
 	vm := goja.New()
 	bindConsole(ctx, vm)
-
 	wrapped := fmt.Sprintf("(%s)", jsCode)
 	v, err := vm.RunString(wrapped)
 	if err != nil {
@@ -46,6 +48,9 @@ func (j *JSFunction) Run(ctx context.Context, sessionArgs, inputArgs map[string]
 	// New VM per run to isolate memory
 	vm := goja.New()
 	bindConsole(ctx, vm)
+	if opts.SkillInvoker != nil {
+		bindSkillService(ctx, vm, opts.SkillInvoker)
+	}
 
 	// Recompile function
 	wrapped := fmt.Sprintf("(%s)", j.code)

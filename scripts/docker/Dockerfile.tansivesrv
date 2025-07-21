@@ -29,8 +29,8 @@ RUN apk update && apk upgrade && \
 RUN addgroup -g 1001 -S tansive && \
     adduser -u 1001 -S tansive -G tansive
 
-RUN mkdir -p /etc/tansive /var/log/tansive && \
-    chown -R tansive:tansive /etc/tansive /var/log/tansive
+RUN mkdir -p /etc/tansive /var/log/tansive /var/tansive/runtime && \
+    chown -R tansive:tansive /etc/tansive /var/log/tansive /var/tansive/runtime
 
 COPY --from=builder /app/tansivesrv /usr/local/bin/tansivesrv
 

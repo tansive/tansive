@@ -43,6 +43,14 @@ spec:
         - patient.id.resolve
       targets:
         - res://skillsets/demo-skillsets/health-record-demo
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - supabase.mcp.use
+        - supabase.sql.query
+        - supabase.tables.list
+      targets:
+        - res://skillsets/demo-skillsets/supabase-demo
 ---
 apiVersion: 0.1.0-alpha.1
 kind: View

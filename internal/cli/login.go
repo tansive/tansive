@@ -17,7 +17,7 @@ type loginResponse struct {
 
 // newLoginCmd creates and returns a new login command
 func newLoginCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Authenticate with the Tansive server",
 		Long: `Login to the Tansive server to obtain an authentication token.
@@ -26,11 +26,16 @@ This command will authenticate with the server and store the token in your confi
 The login process requires:
 - A valid server configuration
 - Single user mode enabled on the server
+- A password (provided via --passwd or stored in config)
 
 Example:
-  tansive login`,
+  tansive login --passwd=mypassword
+  tansive login  # uses password from config file`,
 		RunE: runLogin,
 	}
+
+	cmd.Flags().String("passwd", "", "Password for authentication")
+	return cmd
 }
 
 // runLogin handles the login command execution
@@ -41,16 +46,24 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no configuration loaded")
 	}
 
-	// Create HTTP client using the same approach as create.go
+	passwd, _ := cmd.Flags().GetString("passwd")
+	if passwd == "" {
+		passwd = cfg.Password
+		if passwd == "" {
+			return fmt.Errorf("no password provided. Use --passwd flag or set password in config file")
+		}
+	}
+
 	client := httpclient.NewClient(cfg)
 
-	// Prepare login request using the client's DoRequest method
 	opts := httpclient.RequestOptions{
 		Method: "POST",
 		Path:   "auth/login",
+		QueryParams: map[string]string{
+			"password": passwd,
+		},
 	}
 
-	// Make the login request
 	body, _, err := client.DoRequest(opts)
 	if err != nil {
 		return fmt.Errorf("login request failed: %w", err)
@@ -62,11 +75,14 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to parse login response: %w", err)
 	}
 
-	// Update configuration with new token
 	cfg.APIKey = loginResp.Token
 	cfg.CurrentToken = ""
 	cfg.CurrentCatalog = ""
 	cfg.TokenExpiry = ""
+
+	if passwd != "" {
+		cfg.Password = passwd
+	}
 
 	// Save updated configuration
 	configPath, err := GetDefaultConfigPath()

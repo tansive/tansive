@@ -133,8 +133,28 @@ func TestSkillSetCrud(t *testing.T) {
 							}
 						},
 						"value": null,
+						"valueByAction": null,
 						"attributes": {
-							"hidden": false
+							"exportedActions": ["test.action"],
+							"readOnly": false
+						}
+					},
+					{
+						"name": "test-context",
+						"provider": {},
+						"schema": {
+							"type": "object",
+							"properties": {
+								"name": {
+									"type": "string"
+								}
+							}
+						},
+						"value": null,
+						"valueByAction": null,
+						"attributes": {
+							"exportedActions": ["test.action"],
+							"readOnly": false
 						}
 					}
 				],
@@ -270,8 +290,10 @@ func TestSkillSetCrud(t *testing.T) {
 							}
 						},
 						"value": null,
+						"valueByAction": null,
 						"attributes": {
-							"hidden": false
+							"exportedActions": ["updated.action"],
+							"readOnly": false
 						}
 					}
 				],
@@ -509,8 +531,10 @@ func TestSkillSetList(t *testing.T) {
 							}
 						},
 						"value": null,
+						"valueByAction": null,
 						"attributes": {
-							"hidden": false
+							"exportedActions": ["test.action"],
+							"readOnly": false
 						}
 					}
 				],

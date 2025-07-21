@@ -1,15 +1,22 @@
 package session
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tansive/tansive/internal/common/uuid"
 	"github.com/tansive/tansive/internal/tangent/config"
 	"github.com/tansive/tansive/internal/tangent/runners/stdiorunner"
+	"github.com/tansive/tansive/internal/tangent/session/mcpservice"
 	"github.com/tansive/tansive/internal/tangent/tangentcommon"
 	"github.com/tansive/tansive/internal/tangent/test"
 	"github.com/tansive/tansive/pkg/api"
@@ -34,7 +41,7 @@ func TestCreateSession(t *testing.T) {
 		ViewDefinition: test.GetViewDefinition("prod"),
 	}
 	ctx := context.Background()
-	session, err := ActiveSessionManager().CreateSession(ctx, serverContext, token, expiresAt)
+	session, err := ActiveSessionManager().CreateSession(ctx, serverContext, token, expiresAt, tangentcommon.SessionTypeInteractive)
 	require.NoError(t, err)
 	err = session.fetchObjects(ctx)
 	auditCtx, auditCancel := context.WithCancel(ctx)
@@ -122,4 +129,377 @@ func TestCreateSession(t *testing.T) {
 func isError(response *api.SkillResult) bool {
 	_, ok := response.Output["error"]
 	return ok
+}
+
+func TestCreateMCPProxySession(t *testing.T) {
+	config.SetTestMode(true)
+	ts := test.SetupTestCatalog(t)
+	config.TestInit(t)
+	SetTestMode(true)
+	Init()
+	stdiorunner.TestInit()
+	token, expiresAt := test.AdoptView(t, ts.Catalog, "dev-view", ts.Token)
+	serverContext := &ServerContext{
+		SessionID:      uuid.New(),
+		TenantID:       ts.TenantID,
+		Catalog:        ts.Catalog,
+		Variant:        "dev",
+		SkillSet:       test.MCPSkillsetPath(),
+		Skill:          test.MCPSkillsetAgent(),
+		View:           "dev-view",
+		ViewDefinition: test.GetViewDefinition("dev"),
+	}
+	ctx := context.Background()
+	mcpService, err := mcpservice.CreateMCPService()
+	CreateSkillService()
+	require.NoError(t, err)
+	session, err := ActiveSessionManager().CreateSession(ctx, serverContext, token, expiresAt, tangentcommon.SessionTypeMCPProxy)
+	require.NoError(t, err)
+	err = session.fetchObjects(ctx)
+	auditCtx, auditCancel := context.WithCancel(ctx)
+	InitAuditLog(auditCtx, session)
+	defer auditCancel()
+	require.NoError(t, err)
+	url, token, err := session.RunMCPProxy(ctx, "", "supabase_mcp", map[string]any{})
+	require.NoError(t, err)
+	t.Logf("url: %s", url)
+	t.Logf("token: %s", token)
+
+	// extract the URI from the url without the domain
+	uri := ""
+	if idx := strings.Index(url, "/session/"); idx != -1 {
+		uri = url[idx:]
+	} else {
+		t.Fatalf("could not extract /session/.../mcp from url: %s", url)
+	}
+
+	testListTools(t, mcpService, uri, token)
+	testInvokeTool(t, mcpService, uri, token)
+
+}
+
+// JSON-RPC envelope struct
+type jsonrpcRequest struct {
+	JSONRPC string      `json:"jsonrpc"`
+	ID      int         `json:"id"`
+	Method  string      `json:"method"`
+	Params  interface{} `json:"params"`
+}
+type jsonrpcResponse struct {
+	JSONRPC string           `json:"jsonrpc"`
+	ID      int              `json:"id"`
+	Result  json.RawMessage  `json:"result"`
+	Error   *json.RawMessage `json:"error,omitempty"`
+}
+
+func testListTools(t *testing.T, srv *mcpservice.MCPServer, uri string, token string) {
+	// Use the client library to generate the request payload
+	listReq := mcp.ListToolsRequest{
+		PaginatedRequest: mcp.PaginatedRequest{
+			Request: mcp.Request{
+				Method: "tools/list",
+			},
+		},
+	}
+	jsonReq := jsonrpcRequest{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "tools/list",
+		Params:  listReq.Params,
+	}
+	listReqBytes, err := json.Marshal(jsonReq)
+	if err != nil {
+		t.Fatalf("Failed to marshal ListToolsRequest: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", uri, bytes.NewReader(listReqBytes))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	srv.Router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var rpcResp jsonrpcResponse
+	if err := json.Unmarshal(body, &rpcResp); err != nil {
+		t.Fatalf("Failed to decode JSON-RPC response: %v\nBody: %s", err, string(body))
+	}
+	if rpcResp.Error != nil {
+		t.Fatalf("JSON-RPC error: %s", string(*rpcResp.Error))
+	}
+	var listResp mcp.ListToolsResult
+	if err := json.Unmarshal(rpcResp.Result, &listResp); err != nil {
+		t.Fatalf("Failed to decode ListToolsResult: %v\nBody: %s", err, string(rpcResp.Result))
+	}
+	if len(listResp.Tools) == 0 {
+		t.Fatalf("Expected at least one tool, got none")
+	}
+}
+
+func testInvokeTool(t *testing.T, srv *mcpservice.MCPServer, uri string, token string) {
+	// Directly call the 'list_tables' tool with argument {"schemas": ["public"]}
+	callReq := mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Name:      "list_tables",
+			Arguments: map[string]interface{}{"schemas": []string{"public"}},
+		},
+	}
+
+	callJsonReq := jsonrpcRequest{
+		JSONRPC: "2.0",
+		ID:      2,
+		Method:  "tools/call",
+		Params:  callReq.Params,
+	}
+
+	callReqBytes, err := json.Marshal(callJsonReq)
+	if err != nil {
+		t.Fatalf("Failed to marshal CallToolRequest: %v", err)
+	}
+
+	req2 := httptest.NewRequest("POST", uri, bytes.NewReader(callReqBytes))
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	srv.Router.ServeHTTP(w2, req2)
+
+	resp2 := w2.Result()
+	defer resp2.Body.Close()
+
+	body2, _ := io.ReadAll(resp2.Body)
+	var rpcResp2 jsonrpcResponse
+	if err := json.Unmarshal(body2, &rpcResp2); err != nil {
+		t.Fatalf("Failed to decode JSON-RPC response: %v\nBody: %s", err, string(body2))
+	}
+	if rpcResp2.Error != nil {
+		t.Fatalf("JSON-RPC error: %s", string(*rpcResp2.Error))
+	}
+
+	// Instead of using mcp.CallToolResult, define a local struct for the test
+	type TextContent struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}
+	type CallToolResultText struct {
+		Content []TextContent `json:"content"`
+		IsError bool          `json:"isError,omitempty"`
+	}
+
+	var callResp CallToolResultText
+	if err := json.Unmarshal(rpcResp2.Result, &callResp); err != nil {
+		t.Fatalf("Failed to decode CallToolResultText: %v\nBody: %s", err, string(rpcResp2.Result))
+	}
+	if len(callResp.Content) == 0 {
+		t.Errorf("Expected non-empty Content in CallToolResultText, got none. Full response: %s", string(rpcResp2.Result))
+	}
+	require.Contains(t, callResp.Content[0].Text, "integration_tokens")
+
+	// Make SQL query
+
+	callReq.Params.Name = "execute_sql"
+	callReq.Params.Arguments = map[string]interface{}{"query": "SELECT * FROM integration_tokens;"}
+
+	callJsonReq.Params = callReq.Params
+	callReqBytes, err = json.Marshal(callJsonReq)
+	if err != nil {
+		t.Fatalf("Failed to marshal CallToolRequest: %v", err)
+	}
+	req2 = httptest.NewRequest("POST", uri, bytes.NewReader(callReqBytes))
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 = httptest.NewRecorder()
+	srv.Router.ServeHTTP(w2, req2)
+
+	resp2 = w2.Result()
+	defer resp2.Body.Close()
+
+	body2, _ = io.ReadAll(resp2.Body)
+	var rpcResp3 jsonrpcResponse
+	if err := json.Unmarshal(body2, &rpcResp3); err != nil {
+		t.Fatalf("Failed to decode JSON-RPC response: %v\nBody: %s", err, string(body2))
+	}
+	if rpcResp3.Error != nil {
+		t.Fatalf("JSON-RPC error: %s", string(*rpcResp3.Error))
+	}
+
+	if err := json.Unmarshal(rpcResp3.Result, &callResp); err != nil {
+		t.Fatalf("Failed to decode CallToolResultText: %v\nBody: %s", err, string(rpcResp3.Result))
+	}
+	if len(callResp.Content) == 0 {
+		t.Errorf("Expected non-empty Content in CallToolResultText, got none. Full response: %s", string(rpcResp3.Result))
+	}
+}
+
+func meanStdDev(durations []time.Duration) (mean, stddev float64) {
+	n := float64(len(durations))
+	if n == 0 {
+		return 0, 0
+	}
+	// Convert durations to milliseconds
+	ms := make([]float64, len(durations))
+	for i, d := range durations {
+		ms[i] = float64(d) / 1e6 // convert to milliseconds
+	}
+	var sum float64
+	for _, v := range ms {
+		sum += v
+	}
+	mean = sum / n
+	var variance float64
+	for _, v := range ms {
+		variance += (v - mean) * (v - mean)
+	}
+	variance /= n
+	stddev = sqrt(variance)
+	return
+}
+
+func sqrt(x float64) float64 {
+	z := x
+	for i := 0; i < 10; i++ {
+		z -= (z*z - x) / (2 * z)
+	}
+	return z
+}
+
+func TestBenchmarkMCPProxySession(t *testing.T) {
+	t.Skip("skipping benchmark test")
+	config.SetTestMode(true)
+	ts := test.SetupTestCatalog(t)
+	config.TestInit(t)
+	SetTestMode(true)
+	Init()
+	stdiorunner.TestInit()
+	mcpService, err := mcpservice.CreateMCPService()
+	CreateSkillService()
+	require.NoError(t, err)
+	devUri, devToken := createMCPSession(t, "dev-view", ts)
+	prodUri, prodToken := createMCPSession(t, "prod-view", ts)
+
+	const runs = 20
+	var devDurations []time.Duration
+	var prodDurations []time.Duration
+
+	for i := 0; i < runs; i++ {
+		start := time.Now()
+		testSqlQuery(t, mcpService, devUri, devToken)
+		dur := time.Since(start)
+		devDurations = append(devDurations, dur)
+		t.Logf("dev-view run %d: %s", i+1, dur)
+		time.Sleep(2 * time.Second)
+	}
+
+	for i := 0; i < runs; i++ {
+		start := time.Now()
+		testSqlQuery(t, mcpService, prodUri, prodToken)
+		dur := time.Since(start)
+		prodDurations = append(prodDurations, dur)
+		t.Logf("prod-view run %d: %s", i+1, dur)
+		time.Sleep(2 * time.Second)
+	}
+
+	devMean, devStd := meanStdDev(devDurations)
+	prodMean, prodStd := meanStdDev(prodDurations)
+
+	t.Logf("dev-view SQL query mean: %.2fms, stddev: %.2fms", devMean, devStd)
+	t.Logf("prod-view SQL query mean: %.2fms, stddev: %.2fms", prodMean, prodStd)
+}
+
+func createMCPSession(t *testing.T, view string, ts *test.TestSetup) (string, string) {
+	sessionToken, expiresAt := test.AdoptView(t, ts.Catalog, view, ts.Token)
+	serverContext := &ServerContext{
+		SessionID:      uuid.New(),
+		TenantID:       ts.TenantID,
+		Catalog:        ts.Catalog,
+		Variant:        "dev",
+		SkillSet:       test.MCPSkillsetPath(),
+		Skill:          test.MCPSkillsetAgent(),
+		View:           "dev-view",
+		ViewDefinition: test.GetViewDefinition("dev"),
+	}
+	ctx := context.Background()
+	session, err := ActiveSessionManager().CreateSession(ctx, serverContext, sessionToken, expiresAt, tangentcommon.SessionTypeMCPProxy)
+	require.NoError(t, err)
+	err = session.fetchObjects(ctx)
+	auditCtx, auditCancel := context.WithCancel(ctx)
+	InitAuditLog(auditCtx, session)
+	defer auditCancel()
+	require.NoError(t, err)
+	url, sessionToken, err := session.RunMCPProxy(ctx, "", "supabase_mcp", map[string]any{})
+	require.NoError(t, err)
+	t.Logf("url: %s", url)
+	t.Logf("token: %s", sessionToken)
+
+	// extract the URI from the url without the domain
+	uri := ""
+	if idx := strings.Index(url, "/session/"); idx != -1 {
+		uri = url[idx:]
+	} else {
+		t.Fatalf("could not extract /session/.../mcp from url: %s", url)
+	}
+	return uri, sessionToken
+}
+
+func testSqlQuery(t *testing.T, srv *mcpservice.MCPServer, uri string, token string) {
+	// Directly call the 'list_tables' tool with argument {"schemas": ["public"]}
+	callReq := mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Name:      "list_tables",
+			Arguments: map[string]interface{}{"schemas": []string{"public"}},
+		},
+	}
+
+	callJsonReq := jsonrpcRequest{
+		JSONRPC: "2.0",
+		ID:      2,
+		Method:  "tools/call",
+		Params:  callReq.Params,
+	}
+
+	// Instead of using mcp.CallToolResult, define a local struct for the test
+	type TextContent struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}
+	type CallToolResultText struct {
+		Content []TextContent `json:"content"`
+		IsError bool          `json:"isError,omitempty"`
+	}
+
+	var callResp CallToolResultText
+
+	// Make SQL query
+
+	callReq.Params.Name = "execute_sql"
+	callReq.Params.Arguments = map[string]interface{}{"query": "SELECT * FROM support_tickets;"}
+
+	callJsonReq.Params = callReq.Params
+	callReqBytes, err := json.Marshal(callJsonReq)
+	if err != nil {
+		t.Fatalf("Failed to marshal CallToolRequest: %v", err)
+	}
+	req2 := httptest.NewRequest("POST", uri, bytes.NewReader(callReqBytes))
+	req2.Header.Set("Authorization", "Bearer "+token)
+	w2 := httptest.NewRecorder()
+	srv.Router.ServeHTTP(w2, req2)
+
+	resp2 := w2.Result()
+	defer resp2.Body.Close()
+
+	body2, _ := io.ReadAll(resp2.Body)
+	var rpcResp3 jsonrpcResponse
+	if err := json.Unmarshal(body2, &rpcResp3); err != nil {
+		t.Fatalf("Failed to decode JSON-RPC response: %v\nBody: %s", err, string(body2))
+	}
+	if rpcResp3.Error != nil {
+		t.Fatalf("JSON-RPC error: %s", string(*rpcResp3.Error))
+	}
+
+	if err := json.Unmarshal(rpcResp3.Result, &callResp); err != nil {
+		t.Fatalf("Failed to decode CallToolResultText: %v\nBody: %s", err, string(rpcResp3.Result))
+	}
+	if len(callResp.Content) == 0 {
+		t.Errorf("Expected non-empty Content in CallToolResultText, got none. Full response: %s", string(rpcResp3.Result))
+	}
+
+	require.Contains(t, callResp.Content[0].Text, "untrusted user data")
 }

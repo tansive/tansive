@@ -39,11 +39,21 @@ func (a *AuthConfig) GetTokenExpiryOrDefault() time.Duration {
 
 // TansiveServerConfig holds tansive server related configuration
 type TansiveServerConfig struct {
-	URL string `toml:"url"` // Tansive server URL
+	URL           string `toml:"url"`            // Tansive server URL
+	OnboardingKey string `toml:"onboarding_key"` // Onboarding key for the tansive server
 }
 
 func (t *TansiveServerConfig) GetURL() string {
 	return t.URL
+}
+
+// MCPConfig holds MCP server related configuration
+type MCPConfig struct {
+	HostName   string `toml:"hostname"`    // MCP server hostname
+	Port       string `toml:"port"`        // MCP server port
+	SupportTLS bool   `toml:"support_tls"` // Whether to support TLS
+	TLSCertPEM []byte `toml:"-"`           // PEM encoded TLS certificate
+	TLSKeyPEM  []byte `toml:"-"`           // PEM encoded TLS key
 }
 
 // ConfigParam holds all configuration parameters for the tangent service
@@ -68,6 +78,9 @@ type ConfigParam struct {
 
 	// Tansive server configuration
 	TansiveServer TansiveServerConfig `toml:"tansive_server"`
+
+	// MCP configuration
+	MCP MCPConfig `toml:"mcp"`
 }
 
 var cfg *ConfigParam
@@ -144,6 +157,19 @@ func ValidateConfig(cfg *ConfigParam) error {
 	// Tansive server validation
 	if cfg.TansiveServer.URL == "" {
 		return fmt.Errorf("tansive_server.url is required")
+	}
+
+	// MCP configuration validation
+	// For MCP, don't expose local.tansive.dev due to potential
+	// DNS hijacking especially in the absence of TLS.
+	// While Tangent and Tansive Server use self-signed certs, though
+	// without validation, MCP proxy situations will need cert signed
+	// by a trusted CA.
+	if cfg.MCP.HostName == "" {
+		cfg.MCP.HostName = "127.0.0.1"
+	}
+	if cfg.MCP.Port == "" {
+		cfg.MCP.Port = "8627"
 	}
 
 	if cfg.WorkingDir == "" {

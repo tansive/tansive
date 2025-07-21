@@ -6,6 +6,7 @@ import (
 
 	"github.com/tansive/tansive/internal/common/apperrors"
 	"github.com/tansive/tansive/internal/common/uuid"
+	"github.com/tansive/tansive/internal/tangent/tangentcommon"
 )
 
 // SessionManager defines the interface for session lifecycle management.
@@ -14,7 +15,7 @@ import (
 type SessionManager interface {
 	// CreateSession creates a new session with the given context and authentication token.
 	// Returns the created session and any error encountered during creation.
-	CreateSession(context.Context, *ServerContext, string, time.Time) (*session, apperrors.Error)
+	CreateSession(context.Context, *ServerContext, string, time.Time, tangentcommon.SessionType) (*session, apperrors.Error)
 
 	// GetSession retrieves a session by its unique identifier.
 	// Returns the session and any error encountered during retrieval.

@@ -30,7 +30,7 @@ func TestHandleInteractiveSession(t *testing.T) {
 	t.Logf("Token: %s", token)
 
 	sessionReq := createInteractiveSession(t, token)
-	sessionReq.Interactive = true
+	sessionReq.SessionType = tangentcommon.SessionTypeInteractive
 
 	httpReq, _ := http.NewRequest("POST", "/sessions", nil)
 	setRequestBodyAndHeader(t, httpReq, sessionReq)

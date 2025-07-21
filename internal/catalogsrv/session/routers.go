@@ -39,6 +39,11 @@ var sessionTangentHandlers = []policy.ResponseHandlerParam{
 		Path:    "/execution-state",
 		Handler: updateExecutionState,
 	},
+	{
+		Method:  http.MethodPost,
+		Path:    "/stop",
+		Handler: initializeStopSession,
+	},
 }
 
 var sessionUserHandlers = []policy.ResponseHandlerParam{
@@ -56,6 +61,11 @@ var sessionUserHandlers = []policy.ResponseHandlerParam{
 		Method:  http.MethodGet,
 		Path:    "/{sessionID}",
 		Handler: getSessionSummaryByID,
+	},
+	{
+		Method:  http.MethodDelete,
+		Path:    "/{sessionID}",
+		Handler: stopSession,
 	},
 	{
 		Method:  http.MethodGet,

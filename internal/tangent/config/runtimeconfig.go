@@ -144,7 +144,9 @@ func RegisterTangent() error {
 		PublicKeyLogSigningKey: runtimeConfig.LogSigningKey.PublicKey,
 		Capabilities: []catcommon.RunnerID{
 			catcommon.StdioRunnerID,
+			catcommon.MCPStdioRunnerID,
 		},
+		OnboardingKey: Config().TansiveServer.OnboardingKey,
 	}
 
 	client := getHTTPClient(&clientConfig{

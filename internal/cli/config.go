@@ -24,6 +24,8 @@ type Config struct {
 	ServerURL string `yaml:"server_url"`
 	// APIKey is the authentication token for the Tansive server
 	APIKey string `yaml:"api_key"`
+	// Password is the password for authentication (stored for convenience)
+	Password string `yaml:"password"`
 	// CurrentToken is the active token for the selected catalog
 	CurrentToken string `yaml:"current_token"`
 	// TokenExpiry is when the current token expires
@@ -104,7 +106,7 @@ func (cfg *Config) WriteConfig(file string) error {
 		return fmt.Errorf("unable to generate configuration: %w", err)
 	}
 
-	err = os.WriteFile(file, yamlStr, os.FileMode(0644))
+	err = os.WriteFile(file, yamlStr, os.FileMode(0600))
 	if err != nil {
 		return fmt.Errorf("unable to write config file: %w", err)
 	}
@@ -254,6 +256,7 @@ This is useful when you want to reset your configuration or switch to a differen
 		cfg.CurrentToken = ""
 		cfg.TokenExpiry = ""
 		cfg.CurrentCatalog = ""
+		// Note: We don't clear Password here as it might be needed for future logins
 
 		// Save the config
 		if err := cfg.WriteConfig(configFile); err != nil {
@@ -302,6 +305,7 @@ func setServerConfig(server string) error {
 
 	// Clear the token-related fields
 	cfg.APIKey = ""
+	cfg.Password = ""
 	cfg.CurrentToken = ""
 	cfg.TokenExpiry = ""
 	cfg.CurrentCatalog = ""

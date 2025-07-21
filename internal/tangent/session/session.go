@@ -24,6 +24,7 @@ import (
 	"github.com/tansive/tansive/internal/tangent/config"
 	"github.com/tansive/tansive/internal/tangent/eventlogger"
 	"github.com/tansive/tansive/internal/tangent/runners"
+	"github.com/tansive/tansive/internal/tangent/session/mcpservice"
 	"github.com/tansive/tansive/internal/tangent/session/toolgraph"
 	"github.com/tansive/tansive/internal/tangent/tangentcommon"
 	"github.com/tansive/tansive/pkg/api"
@@ -33,16 +34,19 @@ import (
 // session represents an active execution session for skill invocation.
 // It manages the session state, skill execution, policy validation, and audit logging.
 type session struct {
-	id            uuid.UUID
-	context       *ServerContext
-	skillSet      catalogmanager.SkillSetManager
-	viewDef       *policy.ViewDefinition
-	token         string
-	tokenExpiry   time.Time
-	callGraph     *toolgraph.CallGraph
-	invocationIDs map[string]*policy.ViewDefinition
-	auditLogInfo  auditLogInfo
-	logger        *zerolog.Logger
+	id             uuid.UUID
+	context        *ServerContext
+	skillSet       catalogmanager.SkillSetManager
+	viewDef        *policy.ViewDefinition
+	token          string
+	tokenExpiry    time.Time
+	callGraph      *toolgraph.CallGraph
+	invocationIDs  map[string]*policy.ViewDefinition
+	auditLogInfo   auditLogInfo
+	logger         *zerolog.Logger
+	mcpSession     mcpSession
+	sessionType    tangentcommon.SessionType
+	skillCancelers []context.CancelFunc
 }
 
 // GetSessionID returns the unique identifier for this session.
@@ -109,7 +113,7 @@ func (s *session) Run(ctx context.Context, invokerID string, skillName string, i
 		Any("actions", actions).
 		Msg("allowed by policy")
 
-	transformApplied, inputArgs, err := s.TransformInputForSkill(ctx, skillName, inputArgs)
+	transformApplied, inputArgs, err := s.TransformInputForSkill(ctx, skillName, inputArgs, invocationID)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("unable to transform input")
 		log.Ctx(ctx).Error().Err(err).Msg("unable to transform input")
@@ -133,7 +137,7 @@ func (s *session) Run(ctx context.Context, invokerID string, skillName string, i
 	}
 
 	// We only support interactive skills for now
-	err = s.runInteractiveSkill(ctx, invokerID, invocationID, skillName, inputArgs, ioWriters...)
+	err = s.runSkill(ctx, invokerID, invocationID, skillName, inputArgs, ioWriters...)
 
 	if err != nil {
 		s.logger.Error().Err(err).Msg("unable to run interactive skill")
@@ -186,7 +190,7 @@ func (s *session) ValidateRunPolicy(ctx context.Context, invokerID string, skill
 
 // TransformInputForSkill applies JavaScript transformations to input arguments if defined.
 // Returns whether transformation was applied, the transformed arguments, and any error.
-func (s *session) TransformInputForSkill(ctx context.Context, skillName string, inputArgs map[string]any) (transformApplied bool, retArgs map[string]any, retErr apperrors.Error) {
+func (s *session) TransformInputForSkill(ctx context.Context, skillName string, inputArgs map[string]any, invokerID string) (transformApplied bool, retArgs map[string]any, retErr apperrors.Error) {
 	skill, err := s.resolveSkill(skillName)
 	if err != nil {
 		return false, inputArgs, err
@@ -202,7 +206,8 @@ func (s *session) TransformInputForSkill(ctx context.Context, skillName string, 
 			return false, inputArgs, err
 		}
 		inputArgs, err = jsFunc.Run(ctx, s.context.SessionVariables, inputArgs, jsruntime.Options{
-			Timeout: 25 * time.Millisecond,
+			Timeout:      1000 * time.Millisecond,
+			SkillInvoker: s.skillInvoker(ctx, invokerID),
 		})
 		if err != nil {
 			return false, inputArgs, err
@@ -210,6 +215,32 @@ func (s *session) TransformInputForSkill(ctx context.Context, skillName string, 
 		return true, inputArgs, nil
 	}
 	return false, inputArgs, nil
+}
+
+func (s *session) skillInvoker(ctx context.Context, invokerID string) func(skillName string, inputArgs map[string]any) ([]byte, apperrors.Error) {
+	return func(skillName string, inputArgs map[string]any) ([]byte, apperrors.Error) {
+		// Create writers to capture command outputs
+		outWriter := tangentcommon.NewBufferedWriter()
+		errWriter := tangentcommon.NewBufferedWriter()
+
+		apperr := s.Run(ctx, invokerID, skillName, inputArgs, &tangentcommon.IOWriters{
+			Out: outWriter,
+			Err: errWriter,
+		})
+
+		if apperr != nil {
+			s.logger.Error().Err(apperr).Str("stderr", errWriter.String()).Msg("error invoking skill")
+			return nil, apperr
+		}
+
+		if outWriter.Len() > 0 {
+			return outWriter.Bytes(), nil
+		}
+		if errWriter.Len() > 0 {
+			return errWriter.Bytes(), nil
+		}
+		return nil, nil
+	}
 }
 
 // ValidateInputForSkill validates input arguments against the skill's schema.
@@ -222,9 +253,9 @@ func (s *session) ValidateInputForSkill(ctx context.Context, skillName string, i
 	return skill.ValidateInput(inputArgs)
 }
 
-// runInteractiveSkill executes an interactive skill with the given parameters.
-// Currently only interactive skills are supported.
-func (s *session) runInteractiveSkill(ctx context.Context, invokerID, invocationID string, skillName string, inputArgs map[string]any, ioWriters ...*tangentcommon.IOWriters) apperrors.Error {
+// runSkill executes an skill with the given parameters.
+// Currently only skills are supported.
+func (s *session) runSkill(ctx context.Context, invokerID, invocationID string, skillName string, inputArgs map[string]any, ioWriters ...*tangentcommon.IOWriters) apperrors.Error {
 	if s.skillSet == nil {
 		return ErrUnableToGetSkillset.Msg("skillset not found")
 	}
@@ -242,12 +273,14 @@ func (s *session) runInteractiveSkill(ctx context.Context, invokerID, invocation
 		return err
 	}
 
-	interactiveIOWriters := &tangentcommon.IOWriters{
-		Out: s.getLogger(TopicInteractiveLog).With().Str("actor", "skill").Str("source", "stdout").Str("runner", runner.ID()).Str("skill", skillName).Logger(),
-		Err: s.getLogger(TopicInteractiveLog).With().Str("actor", "skill").Str("source", "stderr").Str("runner", runner.ID()).Str("skill", skillName).Logger(),
-	}
+	if s.sessionType == tangentcommon.SessionTypeInteractive {
+		interactiveIOWriters := &tangentcommon.IOWriters{
+			Out: s.getLogger(TopicInteractiveLog).With().Str("actor", "skill").Str("source", "stdout").Str("runner", runner.ID()).Str("skill", skillName).Logger(),
+			Err: s.getLogger(TopicInteractiveLog).With().Str("actor", "skill").Str("source", "stderr").Str("runner", runner.ID()).Str("skill", skillName).Logger(),
+		}
 
-	runner.AddWriters(interactiveIOWriters)
+		runner.AddWriters(interactiveIOWriters)
+	}
 
 	serviceEndpoint, goerr := config.GetSocketPath()
 	if goerr != nil {
@@ -257,11 +290,14 @@ func (s *session) runInteractiveSkill(ctx context.Context, invokerID, invocation
 	args := api.SkillInputArgs{
 		InvocationID:     invocationID,
 		ServiceEndpoint:  serviceEndpoint,
-		RunMode:          api.RunModeInteractive,
 		SessionID:        s.id.String(),
 		SkillName:        skillName,
 		InputArgs:        inputArgs,
 		SessionVariables: s.context.SessionVariables,
+	}
+
+	if s.sessionType == tangentcommon.SessionTypeInteractive {
+		args.RunMode = api.RunModeInteractive
 	}
 
 	toolErr := s.callGraph.RegisterCall(toolgraph.CallID(invokerID), toolgraph.ToolName(skillName), toolgraph.CallID(invocationID))
@@ -272,6 +308,7 @@ func (s *session) runInteractiveSkill(ctx context.Context, invokerID, invocation
 
 	childCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	s.skillCancelers = append(s.skillCancelers, cancel)
 
 	resultChan := make(chan apperrors.Error, 1)
 
@@ -330,11 +367,15 @@ func (s *session) runInteractiveSkill(ctx context.Context, invokerID, invocation
 			cancel()
 		}
 
-		time.AfterFunc(100*time.Millisecond, func() {
-			once.Do(func() {
-				gracefulExitChan <- struct{}{}
-			})
+		once.Do(func() {
+			gracefulExitChan <- struct{}{}
 		})
+
+		// time.AfterFunc(100*time.Millisecond, func() {
+		// 	once.Do(func() {
+		// 		gracefulExitChan <- struct{}{}
+		// 	})
+		// })
 	}()
 
 	<-gracefulExitChan
@@ -455,7 +496,7 @@ func (s *session) getContext(invocationID string, name string) (any, apperrors.E
 	if s.skillSet == nil {
 		return nil, ErrUnableToGetSkillset.Msg("skillset not found")
 	}
-	value, err := s.skillSet.GetContextValue(name)
+	value, err := s.skillSet.GetContextValue(name, s.viewDef)
 	if err != nil {
 		s.auditLogInfo.auditLogger.Error().
 			Str("event", "context_get").
@@ -574,5 +615,66 @@ func (s *session) Finalize(ctx context.Context, apperr apperrors.Error) apperror
 		return ErrFailedRequestToTansiveServer.Msg(err.Error())
 	}
 
+	return nil
+}
+
+func (s *session) shipAuditLog(ctx context.Context) apperrors.Error {
+	auditLogPath := s.auditLogInfo.auditLogPath
+	auditLogPubKey := s.auditLogInfo.auditLogPubKey
+	var auditLog string
+
+	if auditLogPath != "" {
+		var err error
+		auditLog, err = srvsession.CompressAndEncodeAuditLogFile(auditLogPath)
+		if err != nil {
+			log.Ctx(ctx).Error().Err(err).Msg("failed to compress and encode audit log")
+		}
+	}
+
+	sessionStatus := srvsession.ExecutionStatusUpdate{
+		StatusSummary: srvsession.SessionStatusRunning,
+		Status: srvsession.ExecutionStatus{
+			AuditLog:                auditLog,
+			AuditLogVerificationKey: auditLogPubKey,
+		},
+	}
+
+	client := getHTTPClient(&clientConfig{
+		token:       s.token,
+		tokenExpiry: s.tokenExpiry,
+		serverURL:   config.Config().TansiveServer.GetURL(),
+	})
+
+	body, err := json.Marshal(sessionStatus)
+	if err != nil {
+		return ErrFailedRequestToTansiveServer.Msg(err.Error())
+	}
+
+	opts := httpclient.RequestOptions{
+		Method: http.MethodPut,
+		Path:   "sessions/execution-state",
+		Body:   body,
+	}
+
+	_, _, err = client.DoRequest(opts)
+	if err != nil {
+		return ErrFailedRequestToTansiveServer.Msg(err.Error())
+	}
+
+	return nil
+}
+
+func (s *session) Stop(ctx context.Context, apperr apperrors.Error) apperrors.Error {
+	if s.mcpSession.runner != nil {
+		s.mcpSession.runner.Stop(ctx)
+	}
+	if s.mcpSession.random != "" {
+		mcpservice.StopMCPSession(ctx, s.mcpSession.random)
+	}
+	for _, cancel := range s.skillCancelers {
+		cancel()
+	}
+	s.auditLogInfo.auditLogCancel()
+	s.Finalize(ctx, apperr)
 	return nil
 }

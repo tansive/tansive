@@ -27,3 +27,7 @@ run_cmd tansive apply -f "$SCRIPT_DIR/skillset-k8s.yaml" --variant prod
 
 # Create the health demo skillset in dev
 run_cmd tansive apply -f "$SCRIPT_DIR/skillset-patient.yaml" --variant dev
+
+# Create the Github MCP skillset and views in dev
+run_cmd tansive apply -f "$SCRIPT_DIR/skillset-github.yaml" --variant dev
+run_cmd tansive apply -f "$SCRIPT_DIR/skillset-github-views.yaml"

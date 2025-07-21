@@ -131,7 +131,7 @@ spec:
       exportedActions:
         - kubernetes.troubleshoot
       annotations:
-        llmx:description: |
+        llm:description: |
           A Kubernetes troubleshooting assistant that helps diagnose and resolve issues in your cluster.
           This skill accepts natural language descriptions of problems and leverages knowledge of
           Kubernetes concepts and common failure patterns to provide targeted diagnostic steps and remediation advice.
