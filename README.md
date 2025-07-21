@@ -747,7 +747,7 @@ OPENAI_API_KEY="<your-openai-key-here>"
 # don't modify this. you don't need a kubernetes cluster!
 KUBECONFIG="YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgogIC0gbmFtZTogbXktY2x1c3RlcgogICAgY2x1c3RlcjoKICAgICAgc2VydmVyOiBodHRwczovL2Rldi1lbnYuZXhhbXBsZS5jb20KICAgICAgY2VydGlmaWNhdG9yaXR5LWRhdGE6IDxiYXNlNjQtZW5jb2RlZC1jYS1jZXJ0Pg=="
 GITHUB_TOKEN="your-token-here"
-GITHUB_CMD="/path/to/your/downloaded/github-mcp-server"
+GITHUB_CMD="/var/tangent/custom_scripts/github-mcp-server"
 EOF
 ```
 
@@ -797,9 +797,11 @@ Refer to [this article](https://docs.github.io/blog/implementing-defense-prompt-
 
 <details><summary>Click to expand instructions</summary>
 
-In the current version, Tansive supports running MCP Servers with `stdio` transport. Download the latest version of Github MCP Server from the [official release package](https://github.com/github/github-mcp-server/releases). Pick the latest version. Tansive is tested with 0.7.0 and should work with more latest versions as long as there are no tool name changes.
+In the current version, Tansive supports running MCP Servers with `stdio` transport. Download the latest version of Github MCP Server from the [official release package](https://github.com/github/github-mcp-server/releases). Pick the latest version. Tansive is tested with 0.7.0 and should work with more latest versions as long as there are no tool name changes. Run the following commands from the project root.
 
 ```bash
+mkdir -p custom_scripts
+cd custom_scripts
 # Choose the appropriate OS and arch compatible with your system
 curl -LO https://github.com/github/github-mcp-server/releases/download/v0.7.0/github-mcp-server_Linux_x86_64.tar.gz
 tar -xvf github-mcp-server_Linux_x86_64.tar.gz
@@ -807,7 +809,7 @@ tar -xvf github-mcp-server_Linux_x86_64.tar.gz
 
 > Note: Tansive can run docker distributions. However, in this setup we are running Tansive itself in docker, and therefore running an MCP server packaged in docker would involve DIND or mounting the docker UDS.
 
-Open the `.env` file in your favorite editor and replace the placeholder value GITHUB_TOKEN with your actual access token created from your Github personal settings. Replace placeholder value for GITHUB_CMD with the full path to github-mcp-server binary that your downloaded in the previous step.
+Open the `.env` file in your favorite editor and replace the placeholder value GITHUB_TOKEN with your actual access token created from your Github personal settings.
 
 ```bash
 # Run the setup script again to update the resources
