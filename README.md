@@ -913,7 +913,7 @@ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
 
 Now you’ll retrieve the audit logs for your example runs.
 
-Audit logs are different from debug logs, which are typically printed to the console or sent to external systems for indexing and search. An audit log in Tansive is an immutable, tamper-evident record of the steps and events that occurred during a session. Tansive logs audit events separately from debug logs. You can learn more about the structure and verification of audit logs in the [concepts](https://docs.tansive.io/concepts) section of the docs.
+Audit logs are different from debug logs, which are typically printed to the console or sent to external systems for indexing and search. An audit log in Tansive is an immutable, tamper-evident record of the steps and events that occurred during a session. Tansive logs audit events separately from debug logs. You can learn more about the structure and verification of audit logs in the [concepts](/docs/concepts.md) section of the docs.
 
 Get the list of sessions:
 
@@ -1010,7 +1010,7 @@ Tansive builds on widely adopted, well-tested open-source components, including:
 
 Additional dependencies are listed in [`go.mod`](./go.mod)
 
-📄 [Concepts and Architecture](https://docs.tansive.io/concepts)
+📄 [Concepts](/docs/concepts.md)
 
 ## 🛡️ Security Notice:
 
