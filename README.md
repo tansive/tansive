@@ -11,10 +11,10 @@
 
 Understand and control:
 
-- what AI agents can access
-- which tools they can call
-- the actions they perform
-- who triggered them
+- What AI agents access
+- Which tools they can call
+- The actions they perform
+- Who triggered them
 
 All with full execution graph visibility and audit logs.
 
@@ -32,19 +32,19 @@ For Ops Teams, Tansive provides a `yaml` based control plane for running AI agen
 ```yaml
 #This example specifies Allow/Deny rules for a Kubernetes troubleshooter agent
 spec:
-rules:
-  - intent: Allow
-    actions:
-      - system.skillset.use
-      - kubernetes.pods.list
-      - kubernetes.troubleshoot
-    targets:
-      - res://skillsets/agents/kubernetes-agent
-  - intent: Deny
-    actions:
-      - kubernetes.deployments.restart
-    targets:
-      - res://skillsets/agents/kubernetes-agent
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - kubernetes.pods.list
+        - kubernetes.troubleshoot
+      targets:
+        - res://skillsets/agents/kubernetes-agent
+    - intent: Deny
+      actions:
+        - kubernetes.deployments.restart
+      targets:
+        - res://skillsets/agents/kubernetes-agent
 ```
 
 ---
@@ -53,6 +53,7 @@ rules:
 
 - 💡 [Why Tansive?](#-why-tansive)
 - ✨ [Key Features](#-key-features)
+- 🔑 [Key Concepts](#-key-concepts)
 - 🔧 [How Tansive works](#-how-tansive-works)
 - 🧱 [Architecture](#-architecture)
 - 🎬 [See it in Action](#-see-it-in-action)
@@ -112,6 +113,19 @@ rules:
 
 - **GitOps Friendly**  
   Configure everything via declarative YAML specs version-controlled in Git, modeled on familiar cloud-native patterns.
+
+---
+
+## 🔑 Key Concepts
+
+Before diving into how Tansive works, here are the core concepts you'll encounter:
+
+- **SkillSet**: A collection of tools and agents that work together to accomplish a specific type of task. Think of it as a template that defines what tools are available and how they should be run.
+- **View**: A policy that controls what actions are allowed in a session. Views define which capabilities (like `kubernetes.deployments.restart` or `patient.labresults.get`) are permitted.
+- **Session**: A runtime instance of a SkillSet with specific constraints applied. When you create a session, Tansive instantiates the SkillSet and applies the View policy to control access.
+- **MCP (Model Context Protocol)**: A standard protocol for AI tools to communicate with language models. Tansive creates secure MCP endpoints that expose your tools as defined by policy and applies runtime input validation and constraints.
+- **Skill**: Individual tools or agents within a SkillSet. Skills can be written in any language or framework and are the building blocks of your workflows.
+- **Capability**: Granular permissions expressed as tags (e.g., `query.sql.select`, `payments.reconcile`) that define what actions are allowed.
 
 ---
 
