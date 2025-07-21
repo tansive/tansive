@@ -618,6 +618,52 @@ func (s *session) Finalize(ctx context.Context, apperr apperrors.Error) apperror
 	return nil
 }
 
+func (s *session) shipAuditLog(ctx context.Context) apperrors.Error {
+	auditLogPath := s.auditLogInfo.auditLogPath
+	auditLogPubKey := s.auditLogInfo.auditLogPubKey
+	var auditLog string
+
+	if auditLogPath != "" {
+		var err error
+		auditLog, err = srvsession.CompressAndEncodeAuditLogFile(auditLogPath)
+		if err != nil {
+			log.Ctx(ctx).Error().Err(err).Msg("failed to compress and encode audit log")
+		}
+	}
+
+	sessionStatus := srvsession.ExecutionStatusUpdate{
+		StatusSummary: srvsession.SessionStatusRunning,
+		Status: srvsession.ExecutionStatus{
+			AuditLog:                auditLog,
+			AuditLogVerificationKey: auditLogPubKey,
+		},
+	}
+
+	client := getHTTPClient(&clientConfig{
+		token:       s.token,
+		tokenExpiry: s.tokenExpiry,
+		serverURL:   config.Config().TansiveServer.GetURL(),
+	})
+
+	body, err := json.Marshal(sessionStatus)
+	if err != nil {
+		return ErrFailedRequestToTansiveServer.Msg(err.Error())
+	}
+
+	opts := httpclient.RequestOptions{
+		Method: http.MethodPut,
+		Path:   "sessions/execution-state",
+		Body:   body,
+	}
+
+	_, _, err = client.DoRequest(opts)
+	if err != nil {
+		return ErrFailedRequestToTansiveServer.Msg(err.Error())
+	}
+
+	return nil
+}
+
 func (s *session) Stop(ctx context.Context, apperr apperrors.Error) apperrors.Error {
 	if s.mcpSession.runner != nil {
 		s.mcpSession.runner.Stop(ctx)
