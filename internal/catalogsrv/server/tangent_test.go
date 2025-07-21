@@ -59,6 +59,7 @@ func TestTangentCrud(t *testing.T) {
 			Capabilities:           []catcommon.RunnerID{"system.commandrunner"},
 			PublicKeyAccessKey:     []byte("test-access-key"),
 			PublicKeyLogSigningKey: []byte("test-signing-key"),
+			OnboardingKey:          config.Config().Tangent.OnboardingKey,
 		}
 		body, err := json.Marshal(req)
 		if err != nil {

@@ -102,8 +102,8 @@ spec:
 - **Runtime Constraints and Transforms**  
   Pin runtime sessions to specific values and apply user-defined transforms to modify or redact inputs to agents and tools. Protect sensitive data (e.g. PII, Health data), apply runtime feature flags, and adapt or enrich inputs to match the expectations of your current systems without undertaking costly data migration initiatives.
 
-- **Tamper-Evident Audit Logging**  
-  Maintain hash-linked, signed logs of every action for observability, compliance, and forensic analysis.
+- **Audit Logging**  
+  Maintain hash-linked, signed logs of every action for observability, compliance, and analysis.
 
 - **Agents in any framework**  
   Author agents in any framework - LangGraph, CrewAI, Semantic Kernel, etc.
@@ -913,7 +913,7 @@ tansive session create /demo-skillsets/health-record-demo/health-record-agent \
 
 Now you’ll retrieve the audit logs for your example runs.
 
-Audit logs are different from debug logs, which are typically printed to the console or sent to external systems for indexing and search. An audit log is an immutable, tamper-evident record of the steps and events that occurred during a session. Tansive logs audit events separately from debug logs. You can learn more about the structure and verification of audit logs in the [concepts](https://docs.tansive.io/concepts) section of the docs.
+Audit logs are different from debug logs, which are typically printed to the console or sent to external systems for indexing and search. An audit log in Tansive is an immutable, tamper-evident record of the steps and events that occurred during a session. Tansive logs audit events separately from debug logs. You can learn more about the structure and verification of audit logs in the [concepts](https://docs.tansive.io/concepts) section of the docs.
 
 Get the list of sessions:
 
@@ -987,13 +987,13 @@ Built with care by a solo founder passionate about infrastructure, AI, and devel
 #### Why is this Open Source?
 
 Agents can do many different types of useful things for different people, teams, companies. While I've made opinionated choices on
-architecture, I purposely built Tansive to be easily extensible. Trust and extensibility don't work behind closed doors. If Tansive proves it is useful and builds a community of users, there are enough layers and adjacencies that Tansive and other ecosystem participants can monetize without impacting the functionality, utility, and viability of the open ecosystem.
+architecture, I purposely built Tansive to be easily extensible. Trust and extensibility don't work behind closed doors.
 
 #### Why should we trust this project now?
 
 Tansive is in early Alpha, and it's not ready for production use. But the foundations - hierarchical organization of agent and tool assets, policy-based views, dynamic runtime control via transforms, language and framework agnostic runtime, tamper-evident logs, and extensible SkillSet abstractions - are designed to enable and sustain wide adoption of agents to automate day to day tasks without compromising on security and compliance.
 
-I hope you will try Tansive in your non-production environments with real workloads and provide feedback on the problems you face and the capabilities you’d like Tansive to deliver. Your insights will help shape a platform that aspires to become the standard for secure, auditable, agent-driven workflows. Thank you in advance for being part of this journey.
+I hope you will try Tansive in your non-production environments with real workloads and provide feedback on the problems you face and the capabilities you’d like Tansive to deliver. Your insights will help shape a platform that aspires to become the standard for secure, agent-driven workflows. Thank you in advance for being part of this journey.
 
 #### I see a large initial commit. Where is this coming from?
 
@@ -1017,4 +1017,4 @@ Additional dependencies are listed in [`go.mod`](./go.mod)
 Tansive is in early alpha. While built on established components, it has not undergone third-party security audits.
 Use with caution in sensitive or production environments.
 
-Read more: [Security notes for 0.1.0-alpha release](https://docs.tansive.io/architecture#current-alpha-limitations)
+Refer [SECURITY.md](/SECURITY.md)

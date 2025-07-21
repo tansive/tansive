@@ -39,7 +39,8 @@ func (a *AuthConfig) GetTokenExpiryOrDefault() time.Duration {
 
 // TansiveServerConfig holds tansive server related configuration
 type TansiveServerConfig struct {
-	URL string `toml:"url"` // Tansive server URL
+	URL           string `toml:"url"`            // Tansive server URL
+	OnboardingKey string `toml:"onboarding_key"` // Onboarding key for the tansive server
 }
 
 func (t *TansiveServerConfig) GetURL() string {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/tansive/tansive/internal/catalogsrv/config"
 	"github.com/tansive/tansive/internal/catalogsrv/db"
 	"github.com/tansive/tansive/internal/catalogsrv/db/dberror"
 	"github.com/tansive/tansive/internal/catalogsrv/db/models"
@@ -30,6 +31,10 @@ func createTangent(r *http.Request) (*httpx.Response, error) {
 	req := &TangentInfo{}
 	if err := json.Unmarshal(body, req); err != nil {
 		return nil, httpx.ErrInvalidRequest("invalid request body")
+	}
+
+	if req.OnboardingKey != config.Config().Tangent.OnboardingKey {
+		return nil, httpx.ErrInvalidRequest("invalid onboarding key")
 	}
 
 	if req.ID == uuid.Nil {

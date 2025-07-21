@@ -18,6 +18,7 @@ type TangentInfo struct {
 	Capabilities           []catcommon.RunnerID `json:"capabilities"`
 	PublicKeyAccessKey     []byte               `json:"publicKeyAccessKey"`
 	PublicKeyLogSigningKey []byte               `json:"publicKeyLogSigningKey"`
+	OnboardingKey          string               `json:"onboardingKey"`
 }
 
 type Tangent struct {

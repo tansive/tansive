@@ -382,3 +382,18 @@ func NewCatalogKindHandler(ctx context.Context, requestContext interfaces.Reques
 		req: requestContext,
 	}, nil
 }
+
+func DeleteAllCatalogs(ctx context.Context) apperrors.Error {
+	// fetch all catalogs
+	catalogs, err := db.DB(ctx).ListCatalogs(ctx)
+	if err != nil {
+		return err
+	}
+	for _, catalog := range catalogs {
+		err = DeleteCatalogByName(ctx, catalog.Name)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

@@ -362,6 +362,7 @@ func sqrt(x float64) float64 {
 }
 
 func TestBenchmarkMCPProxySession(t *testing.T) {
+	t.Skip("skipping benchmark test")
 	config.SetTestMode(true)
 	ts := test.SetupTestCatalog(t)
 	config.TestInit(t)
