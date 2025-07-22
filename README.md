@@ -20,7 +20,7 @@ All with full execution graph visibility and audit logs.
 
 Tansive allows you to build and deploy agents on your own infrastructure, independent of external agent platforms, so they operate within your secure boundaries, and access your data and systems in a way you define and control.
 
-Tansive lets developers run AI agents with controlled access to tools — you define what tools each agent can use, specify runtime validation of tool inputs, and Tansive enforces those rules while logging full tool call traces.
+Tansive lets developers run AI agents with controlled access to tools — you define what tools each agent can use, specify runtime validation of tool inputs, and Tansive enforces those rules while logging full tool call traces. Tansive supports Agents written in any framework - LangChain, CrewAI, etc.
 
 ```bash
 $ tansive session create /skillsets/tools/deployment-tools --view devops-engineer
