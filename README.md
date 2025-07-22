@@ -792,7 +792,7 @@ myenv ❯ tansive tree
 
 In this example, we will use Tansive to create a policy-governed tool proxy for popular MCP servers such as Github and configure with popular IDEs/utilities like Cursor, Windsurf, Copilot, Claude Desktop, etc. so you can protect against inappropriate or unintended agent actions or agents exposed to prompt injection risks.
 
-Refer to [this article](https://docs.github.io/blog/implementing-defense-prompt-injection-attacks-mcp) to learn more about new security risks presented by LLM-backed agents and how Tansive provides the tools to enable effective defense.
+Refer to [this article](https://docs.tansive.io/blog/implementing-defense-prompt-injection-attacks-mcp) to learn more about new security risks presented by LLM-backed agents and how Tansive provides the tools to enable effective defense.
 
 <details><summary>Click to expand instructions</summary>
 
