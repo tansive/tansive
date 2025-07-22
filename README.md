@@ -599,16 +599,16 @@ Download and install the Tansive CLI for Linux:
 
 ```bash
 # Download the latest release
-curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.4/tansive-0.1.0-alpha.4-linux-amd64
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-linux-amd64
 
 # Make the binary executable
-chmod +x tansive-0.1.0-alpha.4-linux-amd64
+chmod +x tansive-0.1.0-alpha.5-linux-amd64
 
 # Move the binary to a directory in your PATH
-sudo install -m 0755 tansive-0.1.0-alpha.4-linux-amd64 /usr/local/bin/tansive
+sudo install -m 0755 tansive-0.1.0-alpha.5-linux-amd64 /usr/local/bin/tansive
 
 # Clean up
-rm tansive-0.1.0-alpha.4-linux-amd64
+rm tansive-0.1.0-alpha.5-linux-amd64
 
 # Verify installation
 tansive version
@@ -618,16 +618,16 @@ tansive version
 
 ```bash
 # Download the latest release
-curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.4/tansive-0.1.0-alpha.4-linux-arm64
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-linux-arm64
 
 # Make the binary executable
-chmod +x tansive-0.1.0-alpha.4-linux-arm64
+chmod +x tansive-0.1.0-alpha.5-linux-arm64
 
 # Move the binary to a directory in your PATH
-sudo install -m 0755 tansive-0.1.0-alpha.4-linux-arm64 /usr/local/bin/tansive
+sudo install -m 0755 tansive-0.1.0-alpha.5-linux-arm64 /usr/local/bin/tansive
 
 # Clean up
-rm tansive-0.1.0-alpha.4-linux-arm64
+rm tansive-0.1.0-alpha.5-linux-arm64
 
 # Verify installation
 tansive version
@@ -644,16 +644,16 @@ Download and install the Tansive CLI for macOS:
 
 ```bash
 # Download the latest release
-curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.4/tansive-0.1.0-alpha.4-darwin-amd64
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-darwin-amd64
 
 # Make the binary executable
-chmod +x tansive-0.1.0-alpha.4-darwin-amd64
+chmod +x tansive-0.1.0-alpha.5-darwin-amd64
 
 # Move the binary to a directory in your PATH
-sudo install -m 0755 tansive-0.1.0-alpha.4-darwin-amd64 /usr/local/bin/tansive
+sudo install -m 0755 tansive-0.1.0-alpha.5-darwin-amd64 /usr/local/bin/tansive
 
 # Clean up
-rm tansive-0.1.0-alpha.4-darwin-amd64
+rm tansive-0.1.0-alpha.5-darwin-amd64
 
 # Verify installation
 tansive version
@@ -663,16 +663,16 @@ tansive version
 
 ```bash
 # Download the latest release
-curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.4/tansive-0.1.0-alpha.4-darwin-arm64
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-darwin-arm64
 
 # Make the binary executable
-chmod +x tansive-0.1.0-alpha.4-darwin-arm64
+chmod +x tansive-0.1.0-alpha.5-darwin-arm64
 
 # Move the binary to a directory in your PATH
-sudo install -m 0755 tansive-0.1.0-alpha.4-darwin-arm64 /usr/local/bin/tansive
+sudo install -m 0755 tansive-0.1.0-alpha.5-darwin-arm64 /usr/local/bin/tansive
 
 # Clean up
-rm tansive-0.1.0-alpha.4-darwin-arm64
+rm tansive-0.1.0-alpha.5-darwin-arm64
 
 # Verify installation
 tansive version
@@ -692,10 +692,10 @@ Download and install the Tansive CLI for Windows:
 mkdir -p ~/bin
 
 # Download the binary
-curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.4/tansive-0.1.0-alpha.4-windows-amd64.exe
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-windows-amd64.exe
 
 # Move to bin directory and rename
-mv tansive-0.1.0-alpha.4-windows-amd64.exe ~/bin/tansive.exe
+mv tansive-0.1.0-alpha.5-windows-amd64.exe ~/bin/tansive.exe
 
 # Add to PATH for current session
 export PATH="$HOME/bin:$PATH"
