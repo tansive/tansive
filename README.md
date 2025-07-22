@@ -722,8 +722,8 @@ In this version Tansive server operates in single user mode. So you can login di
 # Set the server URL (default exposed by the docker install)
 tansive config --server https://local.tansive.dev:8678
 
-# Login
-tansive login
+# Login (Replace the placeholder with a password of your choice)
+tansive login --passwd set-a-passwd
 
 # Verify Status
 tansive status
@@ -835,7 +835,7 @@ In this example, you'll simulate an agent solving a Kubernetes incident. You'll 
 
 <details><summary>Click to expand instructions</summary>
 
-Before running this example, you have to configure an API Key for either OpenAI or Anthropic. Open the .env file and replace the placeholder with the API Key.
+> Before running this example, you have to configure an API Key for either OpenAI or Anthropic. Open the .env file and replace the placeholder with the API Key.
 
 **Scenario**
 
@@ -904,8 +904,8 @@ If you provided a CLAUDE-API-KEY, change the `"model"` value to `"claude"`
 
 ```bash
 tansive session create /demo-skillsets/health-record-demo/health-record-agent \
---view dev-view --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"claude"}' \
---session-vars '{"patient_id":"H12345"}'
+--view dev-view --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"gpt4o"}' \
+--session-vars '{"patient_id":"H12345"}' --interactive
 ```
 
 </details>
