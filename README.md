@@ -7,7 +7,7 @@
 
 ### Platform for Secure and Policy-driven AI Agents
 
-[Tansive](https://tansive.com) lets you securely run AI agents and tools with fine-grained policies, runtime enforcement, and tamper-evident audit logs.
+[Tansive](https://tansive.com) lets you securely run AI agents and tools on your own infrastructure with fine-grained policies, runtime enforcement, and tamper-evident audit logs.
 
 Understand and control:
 
@@ -18,6 +18,8 @@ Understand and control:
 
 All with full execution graph visibility and audit logs.
 
+Tansive allows you to build and deploy agents independent of any agent platform, so they operate within your secure boundaries and access your data and systems in a way you define and control.
+
 Tansive lets developers run AI agents with controlled access to tools — you define what tools each agent can use, specify runtime validation of tool inputs, and Tansive enforces those rules while logging full tool call traces.
 
 ```bash
@@ -27,7 +29,7 @@ https://127.0.0.1:8627/session/mcp
 Access token: tn_7c2e4e0162df66d929666703dc67a87a
 ```
 
-For Ops Teams, Tansive provides a `yaml` based control plane for running AI agents and tools with policy-driven security and full observability.
+For Ops Teams, Tansive provides a `yaml` based control plane for running AI agents and tools with policy-driven security and full observability. Tansive provides an agent and tools catalog, a policy store, and a control plane to deploy and manage your agent sessions. Via a portable runtime, agents can be deployed on VMs to serve other apps or execute tasks within your defined VPC. Agents can also run on user laptops to automate their tasks. Agents access models anywhere they can be accessed via an API.
 
 ```yaml
 #This example specifies Allow/Deny rules for a Kubernetes troubleshooter agent
@@ -80,7 +82,7 @@ spec:
 
 - **Secure Integration**: AI Tools and Agents need context from many systems, but integrating securely across different APIs is challenging. Tansive provides rules-based access control at every interface in the Agent pipeline.
 
-- **Reduce Operational Burden**: Deploy and manage AI Agents using the same GitOps processes teams use today. Tansive is cloud-agnostic and works across clouds.
+- **Reduce Operational Burden and Cost**: Deploy and manage AI Agents on your existing infrastructure - cloud, on-premise - using the same GitOps processes teams use today. Tansive is cloud-agnostic and works across clouds. Use models from anywhere.
 
 - **Chained Actions amplify risk:** When agents and tools call each other, small problems have a large blast radius. Tansive provides audit logs that capture the full tool call graph and policy decisions to help trace and mitigate risks.
 
@@ -136,7 +138,7 @@ Tansive lets developers run AI agents with controlled access to tools — you de
 
 - Call tools via Tansive from your agents written in LangGraph, CrewAI or any of your favorite frameworks, so you get filtered tool access, runtime evaluation of tool inputs, and detailed audit logs with full tool call lineage.
 
-- Tansive is also an orchestrator, running your tools or agent code directly.
+- Tansive is also an orchestrator, running your tools and agent code directly.
 
   - Let Tansive run your tools written in Python, Node, Go, etc. Tansive will automatically create an MCP endpoint for your tools with authenticated HTTP transport, so you don't have to manage tokens and authorization.
   - You can also have Tansive run your agent code directly. When you do, the agent will be subject to the same policy and runtime access constraints, giving you end-to-end control over the agent.
@@ -145,7 +147,7 @@ Tansive lets developers run AI agents with controlled access to tools — you de
 
 <details> <summary>Examples: Create tool and agent sessions</summary>
 
-e.g., You can create secure MCP endpoints for different roles to configure tools such as cursor.
+e.g., You can create secure MCP endpoints with different roles to configure tools such as cursor. Here we use Tansive as just a tool orchestrator and proxy.
 
 ```bash
 $ tansive session create /skillsets/tools/deployment-tools --view devops-engineer
