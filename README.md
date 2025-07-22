@@ -7,7 +7,7 @@
 
 ### Platform for Secure and Policy-driven AI Agents
 
-[Tansive](https://tansive.com) lets you securely run AI agents and tools with fine-grained policies, runtime enforcement, and tamper-evident audit logs.
+[Tansive](https://tansive.com) lets you securely run AI agents and tools on your own infrastructure with fine-grained policies, runtime enforcement, and tamper-evident audit logs.
 
 Understand and control:
 
@@ -18,7 +18,9 @@ Understand and control:
 
 All with full execution graph visibility and audit logs.
 
-Tansive lets developers run AI agents with controlled access to tools — you define what tools each agent can use, specify runtime validation of tool inputs, and Tansive enforces those rules while logging full tool call traces.
+Tansive enables you to build and deploy agents on your own infrastructure, independent of external platforms. Your agents operate within your secure boundaries and access your data and systems according to your defined policies.
+
+**For Developers:** Define what tools each agent can use and specify runtime validation rules. Tansive enforces these policies while logging every tool call. Works with any agent framework - LangChain, CrewAI, and more.
 
 ```bash
 $ tansive session create /skillsets/tools/deployment-tools --view devops-engineer
@@ -27,10 +29,10 @@ https://127.0.0.1:8627/session/mcp
 Access token: tn_7c2e4e0162df66d929666703dc67a87a
 ```
 
-For Ops Teams, Tansive provides a `yaml` based control plane for running AI agents and tools with policy-driven security and full observability.
+**For ops teams:** Tansive provides a YAML-based control plane for running AI agents and tools with policy-driven security and full observability. It includes an agent and tools catalog, a policy store, and a control plane to deploy and manage agent sessions. Via a portable runtime, agents can be deployed on VMs to serve other apps or execute tasks within your defined network boundaries or VPCs. Agents can also run on user laptops to automate their tasks. Models can be hosted anywhere that's accessible via API.
 
 ```yaml
-#This example specifies Allow/Deny rules for a Kubernetes troubleshooter agent
+# Example: Kubernetes troubleshooter agent policies
 spec:
   rules:
     - intent: Allow
@@ -80,7 +82,7 @@ spec:
 
 - **Secure Integration**: AI Tools and Agents need context from many systems, but integrating securely across different APIs is challenging. Tansive provides rules-based access control at every interface in the Agent pipeline.
 
-- **Reduce Operational Burden**: Deploy and manage AI Agents using the same GitOps processes teams use today. Tansive is cloud-agnostic and works across clouds.
+- **Reduce Operational Burden and Cost**: Deploy and manage AI Agents on your existing infrastructure - cloud, on-premise - using the same GitOps processes teams use today. Tansive is cloud-agnostic and works across clouds. Use models from anywhere.
 
 - **Chained Actions amplify risk:** When agents and tools call each other, small problems have a large blast radius. Tansive provides audit logs that capture the full tool call graph and policy decisions to help trace and mitigate risks.
 
@@ -134,30 +136,29 @@ Before diving into how Tansive works, here are the core concepts you'll encounte
 
 Tansive lets developers run AI agents with controlled access to tools — you define what tools each agent can use, and Tansive enforces those rules while logging full tool call traces.
 
-- Call tools via Tansive from your agents written in LangGraph, CrewAI or any of your favorite frameworks, so you get filtered tool access, runtime evaluation of tool inputs, and detailed audit logs with full tool call lineage.
+- **Call tools via Tansive** from your agents written in LangGraph, CrewAI or any of your favorite frameworks, so you get filtered tool access, runtime evaluation of tool inputs, and detailed audit logs with full tool call lineage.
 
-- Tansive is also an orchestrator, running your tools or agent code directly.
+- **Tansive as orchestrator** - Run your tools and agent code directly:
 
   - Let Tansive run your tools written in Python, Node, Go, etc. Tansive will automatically create an MCP endpoint for your tools with authenticated HTTP transport, so you don't have to manage tokens and authorization.
   - You can also have Tansive run your agent code directly. When you do, the agent will be subject to the same policy and runtime access constraints, giving you end-to-end control over the agent.
 
-- Run multiple concurrent sessions with different policies — Create a template with a collection tools and agents tagged with _Capability_ tags, then create filters based on those tags to control what each session can do. In Tansive, a collection of tools and agents that can together accomplish a type of job is called a `SkillSet`. Policies are called `Views`.
+- **Run multiple concurrent sessions** with different policies — Create a template with a collection of tools and agents tagged with _Capability_ tags, then create filters based on those tags to control what each session can do. In Tansive, a collection of tools and agents that can together accomplish a type of job is called a `SkillSet`. Policies are called `Views`.
 
 <details> <summary>Examples: Create tool and agent sessions</summary>
 
-e.g., You can create secure MCP endpoints for different roles to configure tools such as cursor.
+e.g., You can create secure MCP endpoints with different roles to configure tools such as cursor. Here we use Tansive as just a tool orchestrator and proxy.
 
 ```bash
 $ tansive session create /skillsets/tools/deployment-tools --view devops-engineer
 Session created. MCP endpoint:
 https://127.0.0.1:8627/session/mcp
 Access token: tn_7c2e4e0162df66d929666703dc67a87a
-
 ```
 
 e.g., You can run a complete agent workflow with a prompt. You can also restrict the agent from accessing sensitive data.
 
-```
+```bash
 $ tansive session create /skillsets/agents/health-record-agent \
 --view prod-view \
 --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their
@@ -166,23 +167,24 @@ bloodwork and tell me if there is anything wrong?","model":"claude"}' \
 
 # This agent session runs the agent bot with the provided prompt. We scoped the session to John's patient_id
 # so while the agent can access John's data, it cannot access Sheila's.
-
 ```
 
 </details>
 
 #### For DevOps Engineers:
 
-Tansive provides a `yaml` based control plane for running AI agents and tools with policy-driven security and observability.
+Tansive provides a YAML-based control plane for running AI agents and tools with policy-driven security and observability.
 
-- Create a `Catalog` of workflows consisting of Tools and Agents by defining them in YAML
-- Assign them across different environments such as `dev`, `stage`, `prod`. Give teams their own `namespace` in each environment
+- Create a **Catalog** of workflows consisting of tools and agents by defining them in YAML
+- Assign them across different environments such as `dev`, `stage`, `prod`. Give teams their own namespace in each environment
 - Define access and runtime policies in YAML based on environments and namespaces
-- Run workflows scoped to the policies you created.
-- Run your tools and agents across different VPCs depending on systems they need to access.
-- Deploy and manage AI Agents using your existing CI/CD processes.
+- Deploy workflows with policy-based access controls
+- Deploy tools and agents across different VPCs depending on systems they need to access
+- Integrate AI agent deployment with your existing CI/CD processes
 
-<details> <summary>Example `yaml` definition of a SkillSet</summary>
+<details> <summary>Example YAML definition of a SkillSet</summary>
+
+This example shows how to define a health record agent SkillSet with multiple tools and model configurations:
 
 ```yaml
 spec:
@@ -273,30 +275,31 @@ spec:
 
 ### Functional Architecture of a Tansive Session
 
-This diagram shows how Tansive orchestrates tools, policies, and agents within a session runtime
+This diagram shows how Tansive orchestrates tools, policies, and agents within a session runtime:
 
 ![Tansive Functional Architecture](media/tansive-functional-arch.svg)
 
-When you create a session, Tansive creates a runtime instance of the "SkillSet" constrained by the specified "View". SkillSet is a `yaml` template that specifies all the tools and agents involved in accomplishing a specific type of task (e.g., placing an order based on availability of inventory) along with information on how to run them, and what capabilities they expose.  
-A "View" is a policy that specifies what capabilities are permitted to be used in a session. Capabilities are expressed via tags such as `kubernetes.deployments.restart`, `query.sql.update`, that you define at your desired level of granularity.
+When you create a session, Tansive creates a runtime instance of the **SkillSet** constrained by the specified **View**. A SkillSet is a YAML template that specifies all the tools and agents involved in accomplishing a specific type of task (e.g., placing an order based on availability of inventory). It includes information on how to run them and what capabilities they expose.
 
-At the core of a Tansive session is the Tool Call router. Tools can be added to the router from various sources:
+A **View** is a policy that specifies what capabilities are permitted to be used in a session. Capabilities are expressed via tags such as `kubernetes.deployments.restart` or `query.sql.update` that you define at your desired level of granularity.
 
-- **Remote MCP Servers:** MCP endpoints hosted by external resources that use HTTP Transport (Remote MCP)
-- **Local MCP Servers:** MCP servers that use `stdio` transport that access external resources via REST API or any other means such as gRPC. (Local MCP)
-- **Local Scripts:** Simple run-once-and-exit tools can be written in any language. These tools are run by Tansive with a json argument and the tool prints results to standard output or error.
+At the core of a Tansive session is the **Tool Call Router**. Tools can be added to the router from various sources:
 
-When a session is created, Tansive automatically creates an MCP endpoint using authenticated HTTP transport.
+- **Remote MCP Servers:** MCP (Model Context Protocol) endpoints hosted by external resources that use HTTP transport
+- **Local MCP Servers:** MCP servers that use stdio transport and access external resources via REST API, gRPC, or other protocols
+- **Local Scripts:** Simple run-once-and-exit tools written in any language. These tools are run by Tansive with JSON arguments and print results to standard output or error
 
-- Only the Tools specified by the View policy associated with the session are exposed via the endpoint.
-- The router applies tool input transformations specified in the SkillSet at runtime before tool calls are dispatched.
-- All tool calls, their inputs, and policy evaluation decisions and rules that supported the decision are logged.
+When a session is created, Tansive automatically creates an MCP endpoint using authenticated HTTP transport:
 
-Agents can integrate with Tansive in one of two modes:
+- Only the tools specified by the View policy associated with the session are exposed via the endpoint
+- The router applies tool input transformations specified in the SkillSet at runtime before tool calls are dispatched
+- All tool calls, their inputs, and policy evaluation decisions are logged with the rules that supported each decision
 
-- Tansive can run the agent directly subjecting it to the same View policies, therefore providing end to end control over the entire pipeline. In this case, the agent accesses tools via the Tansive SkillSet service which uses a Unix Domain Socket as transport. Upcoming releases will add support for Tansive managed agents to access tools via MCP.
+Agents can integrate with Tansive in two modes:
 
-- Agents are run independently, but Tansive governs tool access. This mode also covers agents in tools such as Cursor, Claude desktop, etc.
+- **Tansive-managed agents:** Tansive runs the agent directly, applying the same View policies. This provides end-to-end control over the entire pipeline. The agent accesses tools via the Tansive SkillSet service using Unix Domain Socket transport. Upcoming releases will add support for Tansive-managed agents to access tools via MCP.
+
+- **Independent agents:** Agents run independently, but Tansive governs their tool access. This mode covers agents in tools such as Cursor, Claude Desktop, and similar applications.
 
 ---
 
