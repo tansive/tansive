@@ -67,7 +67,6 @@ spec:
     - [Run the Policy-driven agent](#run-the-policy-driven-agent)
     - [Run the Secure Data Handling example](#run-the-secure-data-handling-example)
   - [Explore the Audit Log](#explore-the-audit-log)
-- 📄 [Documentation](#-documentation)
 - 💬 [Community and Support](#-community-and-support)
 - 💼 [License](#-license)
 - 🙏 [Contributing](#-contributing)
@@ -600,16 +599,16 @@ Download and install the Tansive CLI for Linux:
 
 ```bash
 # Download the latest release
-curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.3/tansive-0.1.0-alpha.3-linux-amd64
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-linux-amd64
 
 # Make the binary executable
-chmod +x tansive-0.1.0-alpha.3-linux-amd64
+chmod +x tansive-0.1.0-alpha.5-linux-amd64
 
 # Move the binary to a directory in your PATH
-sudo install -m 0755 tansive-0.1.0-alpha.3-linux-amd64 /usr/local/bin/tansive
+sudo install -m 0755 tansive-0.1.0-alpha.5-linux-amd64 /usr/local/bin/tansive
 
 # Clean up
-rm tansive-0.1.0-alpha.3-linux-amd64
+rm tansive-0.1.0-alpha.5-linux-amd64
 
 # Verify installation
 tansive version
@@ -619,16 +618,16 @@ tansive version
 
 ```bash
 # Download the latest release
-curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.3/tansive-0.1.0-alpha.3-linux-arm64
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-linux-arm64
 
 # Make the binary executable
-chmod +x tansive-0.1.0-alpha.3-linux-arm64
+chmod +x tansive-0.1.0-alpha.5-linux-arm64
 
 # Move the binary to a directory in your PATH
-sudo install -m 0755 tansive-0.1.0-alpha.3-linux-arm64 /usr/local/bin/tansive
+sudo install -m 0755 tansive-0.1.0-alpha.5-linux-arm64 /usr/local/bin/tansive
 
 # Clean up
-rm tansive-0.1.0-alpha.3-linux-arm64
+rm tansive-0.1.0-alpha.5-linux-arm64
 
 # Verify installation
 tansive version
@@ -645,16 +644,16 @@ Download and install the Tansive CLI for macOS:
 
 ```bash
 # Download the latest release
-curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.3/tansive-0.1.0-alpha.3-darwin-amd64
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-darwin-amd64
 
 # Make the binary executable
-chmod +x tansive-0.1.0-alpha.3-darwin-amd64
+chmod +x tansive-0.1.0-alpha.5-darwin-amd64
 
 # Move the binary to a directory in your PATH
-sudo install -m 0755 tansive-0.1.0-alpha.3-darwin-amd64 /usr/local/bin/tansive
+sudo install -m 0755 tansive-0.1.0-alpha.5-darwin-amd64 /usr/local/bin/tansive
 
 # Clean up
-rm tansive-0.1.0-alpha.3-darwin-amd64
+rm tansive-0.1.0-alpha.5-darwin-amd64
 
 # Verify installation
 tansive version
@@ -664,16 +663,16 @@ tansive version
 
 ```bash
 # Download the latest release
-curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.3/tansive-0.1.0-alpha.3-darwin-arm64
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-darwin-arm64
 
 # Make the binary executable
-chmod +x tansive-0.1.0-alpha.3-darwin-arm64
+chmod +x tansive-0.1.0-alpha.5-darwin-arm64
 
 # Move the binary to a directory in your PATH
-sudo install -m 0755 tansive-0.1.0-alpha.3-darwin-arm64 /usr/local/bin/tansive
+sudo install -m 0755 tansive-0.1.0-alpha.5-darwin-arm64 /usr/local/bin/tansive
 
 # Clean up
-rm tansive-0.1.0-alpha.3-darwin-arm64
+rm tansive-0.1.0-alpha.5-darwin-arm64
 
 # Verify installation
 tansive version
@@ -693,10 +692,10 @@ Download and install the Tansive CLI for Windows:
 mkdir -p ~/bin
 
 # Download the binary
-curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.3/tansive-0.1.0-alpha.3-windows-amd64.exe
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-windows-amd64.exe
 
 # Move to bin directory and rename
-mv tansive-0.1.0-alpha.3-windows-amd64.exe ~/bin/tansive.exe
+mv tansive-0.1.0-alpha.5-windows-amd64.exe ~/bin/tansive.exe
 
 # Add to PATH for current session
 export PATH="$HOME/bin:$PATH"
@@ -723,8 +722,8 @@ In this version Tansive server operates in single user mode. So you can login di
 # Set the server URL (default exposed by the docker install)
 tansive config --server https://local.tansive.dev:8678
 
-# Login
-tansive login
+# Login (Replace the placeholder with a password of your choice)
+tansive login --passwd set-a-passwd
 
 # Verify Status
 tansive status
@@ -836,7 +835,7 @@ In this example, you'll simulate an agent solving a Kubernetes incident. You'll 
 
 <details><summary>Click to expand instructions</summary>
 
-Before running this example, you have to configure an API Key for either OpenAI or Anthropic. Open the .env file and replace the placeholder with the API Key.
+> Before running this example, you have to configure an API Key for either OpenAI or Anthropic. Open the .env file and replace the placeholder with the API Key.
 
 **Scenario**
 
@@ -905,8 +904,8 @@ If you provided a CLAUDE-API-KEY, change the `"model"` value to `"claude"`
 
 ```bash
 tansive session create /demo-skillsets/health-record-demo/health-record-agent \
---view dev-view --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"claude"}' \
---session-vars '{"patient_id":"H12345"}'
+--view dev-view --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"gpt4o"}' \
+--session-vars '{"patient_id":"H12345"}' --interactive
 ```
 
 </details>
@@ -950,12 +949,6 @@ The `verify` command validates the hash chain to confirm the log has not been ta
 ### 🙏 Ready to explore?
 
 [Get started with the docs](https://docs.tansive.io) or [start a discussion](https://github.com/tansive/tansive/discussions).
-
----
-
-## 📄 Documentation
-
-Documentation and examples are available at [https://docs.tansive.io](https://docs.tansive.io)
 
 ---
 

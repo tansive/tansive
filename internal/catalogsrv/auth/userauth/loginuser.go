@@ -70,6 +70,8 @@ func onboardSingleUser(ctx context.Context, password string) error {
 	if err != nil {
 		return err
 	}
+	ctx = catcommon.WithTenantID(ctx, catcommon.TenantId(config.Config().DefaultTenantID))
+	ctx = catcommon.WithProjectID(ctx, catcommon.ProjectId(config.Config().DefaultProjectID))
 	// delete all catalogs
 	err = catalogmanager.DeleteAllCatalogs(ctx)
 	if err != nil {
