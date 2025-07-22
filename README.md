@@ -18,22 +18,9 @@ Understand and control:
 
 All with full execution graph visibility and audit logs.
 
-Tansive allows you to build and deploy agents on your own infrastructure, independent of external platforms. Your agents operate within your secure boundaries and access your data and systems in ways you define and control.
+Tansive enables you to build and deploy agents on your own infrastructure, independent of external platforms. Your agents operate within your secure boundaries and access your data and systems according to your defined policies.
 
-For developers, Tansive provides controlled access to tools — you define what tools each agent can use, and Tansive enforces those rules while logging full tool call traces.
-
-- **Call tools via Tansive** from your agents written in LangGraph, CrewAI or any of your favorite frameworks, so you get filtered tool access, runtime evaluation of tool inputs, and detailed audit logs with full tool call lineage.
-
-- **Tansive as orchestrator** - Run your tools and agent code directly:
-
-  - Let Tansive run your tools written in Python, Node, Go, etc. Tansive will automatically create an MCP endpoint for your tools with authenticated HTTP transport, so you don't have to manage tokens and authorization.
-  - You can also have Tansive run your agent code directly. When you do, the agent will be subject to the same policy and runtime access constraints, giving you end-to-end control over the agent.
-
-- **Run multiple concurrent sessions** with different policies — Create a template with a collection of tools and agents tagged with _Capability_ tags, then create filters based on those tags to control what each session can do. In Tansive, a collection of tools and agents that can together accomplish a type of job is called a `SkillSet`. Policies are called `Views`.
-
-<details> <summary>Examples: Create tool and agent sessions</summary>
-
-e.g., You can create secure MCP endpoints with different roles to configure tools such as cursor. Here we use Tansive as just a tool orchestrator and proxy.
+**For Developers:** Define what tools each agent can use and specify runtime validation rules. Tansive enforces these policies while logging every tool call. Works with any agent framework - LangChain, CrewAI, and more.
 
 ```bash
 $ tansive session create /skillsets/tools/deployment-tools --view devops-engineer
@@ -42,25 +29,10 @@ https://127.0.0.1:8627/session/mcp
 Access token: tn_7c2e4e0162df66d929666703dc67a87a
 ```
 
-e.g., You can run a complete agent workflow with a prompt. You can also restrict the agent from accessing sensitive data.
-
-```bash
-$ tansive session create /skillsets/agents/health-record-agent \
---view prod-view \
---input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their
-bloodwork and tell me if there is anything wrong?","model":"claude"}' \
---session-vars '{"patient_id":"H12345"}' --interactive
-
-# This agent session runs the agent bot with the provided prompt. We scoped the session to John's patient_id
-# so while the agent can access John's data, it cannot access Sheila's.
-```
-
-</details>
-
-For ops teams, Tansive provides a YAML-based control plane for running AI agents and tools with policy-driven security and full observability. It includes an agent and tools catalog, a policy store, and a control plane to deploy and manage agent sessions. Via a portable runtime, agents can be deployed on VMs to serve other apps or execute tasks within your defined network boundaries or VPCs. Agents can also run on user laptops to automate their tasks. Models can be hosted anywhere that's accessible via API.
+**For ops teams:** Tansive provides a YAML-based control plane for running AI agents and tools with policy-driven security and full observability. It includes an agent and tools catalog, a policy store, and a control plane to deploy and manage agent sessions. Via a portable runtime, agents can be deployed on VMs to serve other apps or execute tasks within your defined network boundaries or VPCs. Agents can also run on user laptops to automate their tasks. Models can be hosted anywhere that's accessible via API.
 
 ```yaml
-#This example specifies Allow/Deny rules for a Kubernetes troubleshooter agent
+# Example: Kubernetes troubleshooter agent policies
 spec:
   rules:
     - intent: Allow
