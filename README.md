@@ -67,7 +67,6 @@ spec:
     - [Run the Policy-driven agent](#run-the-policy-driven-agent)
     - [Run the Secure Data Handling example](#run-the-secure-data-handling-example)
   - [Explore the Audit Log](#explore-the-audit-log)
-- 📄 [Documentation](#-documentation)
 - 💬 [Community and Support](#-community-and-support)
 - 💼 [License](#-license)
 - 🙏 [Contributing](#-contributing)
@@ -950,12 +949,6 @@ The `verify` command validates the hash chain to confirm the log has not been ta
 ### 🙏 Ready to explore?
 
 [Get started with the docs](https://docs.tansive.io) or [start a discussion](https://github.com/tansive/tansive/discussions).
-
----
-
-## 📄 Documentation
-
-Documentation and examples are available at [https://docs.tansive.io](https://docs.tansive.io)
 
 ---
 
