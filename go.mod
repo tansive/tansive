@@ -24,7 +24,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/json-iterator/go v1.1.12
 	github.com/lib/pq v1.10.9
-	github.com/mark3labs/mcp-go v0.33.0
+	github.com/mark3labs/mcp-go v0.35.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/openai/openai-go v1.6.0
 	github.com/pkg/errors v0.9.1
