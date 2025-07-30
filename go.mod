@@ -6,15 +6,15 @@ toolchain go1.24.2
 
 require (
 	github.com/BurntSushi/toml v1.5.0
-	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/anand-gl/jsoncanonicalizer v0.1.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/dop251/goja v0.0.0-20250531102226-cb187b08699c
 	github.com/fatih/color v1.18.0
 	github.com/go-chi/chi/v5 v5.2.2
-	github.com/go-chi/cors v1.2.1
+	github.com/go-chi/cors v1.2.2
 	github.com/go-playground/validator/v10 v10.27.0
-	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/golang/snappy v1.0.0
 	github.com/google/uuid v1.6.0
 	github.com/h2non/filetype v1.1.3
