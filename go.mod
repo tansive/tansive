@@ -26,7 +26,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/mark3labs/mcp-go v0.35.0
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/openai/openai-go v1.6.0
+	github.com/openai/openai-go v1.12.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.34.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
