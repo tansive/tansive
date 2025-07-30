@@ -1,7 +1,18 @@
 services:
+  setup-onboarding-keys:
+    image: alpine:latest
+    container_name: tansive-setup-keys
+    volumes:
+      - ./setup_onboarding_keys.sh:/setup_onboarding_keys.sh
+      - ./conf:/conf
+    working_dir: /conf
+    command: ["sh", "-c", "apk add --no-cache openssl && sh /setup_onboarding_keys.sh"]
+
   postgres:
     image: postgres:16
     container_name: tansive-postgres
+    depends_on:
+      - setup-onboarding-keys
     environment:
       POSTGRES_USER: tansive
       POSTGRES_PASSWORD: abc@123
@@ -26,8 +37,9 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./conf/tansivesrv.docker.conf:/etc/tansive/tansivesrv.conf
+      - ./conf/tansivesrv.docker.conf.updated:/etc/tansive/tansivesrv.conf
       - tansive_server_logs:/var/log/tansive
+      - tansive_runtime_config:/var/tansive/runtime
     ports:
       - "8678:8678"
     restart: unless-stopped
@@ -40,17 +52,19 @@ services:
 
   tangent:
     image: ghcr.io/tansive/tansive/tangent-minimal:latest
-    container_name: tangent-server
+    container_name: tangent
     depends_on:
       tansive-server:
         condition: service_healthy
     volumes:
-      - ./conf/tangent.docker.conf:/etc/tansive/tangent.conf
+      - ./conf/tangent.docker.conf.updated:/etc/tansive/tangent.conf
       - tangent_working_dir:/var/tangent
       - ../../examples/skillset_scripts:/var/tangent/scripts
+      - ../../custom_scripts:/var/tangent/custom_scripts
       - tangent_logs:/var/log/tangent
     ports:
       - "8468:8468"
+      - "8627:8627"
     restart: unless-stopped
     command: ["tangent", "--config", "/etc/tansive/tangent.conf"]
     healthcheck:
@@ -63,6 +77,8 @@ volumes:
   postgres_data:
     driver: local
   tansive_server_logs:
+    driver: local
+  tansive_runtime_config:
     driver: local
   tangent_working_dir:
     driver: local

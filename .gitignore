@@ -14,6 +14,8 @@
 build/
 dist/
 tmp/
+custom_scripts/*
+!custom_scripts/readme.txt
 
 # Dependency directories
 vendor/
@@ -61,3 +63,6 @@ sdist/
 develop-eggs/
 .installed.cfg
 *.egg
+
+*.backup
+*.updated

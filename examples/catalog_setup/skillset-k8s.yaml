@@ -130,11 +130,3 @@ spec:
         description: "Troubleshooting steps and recommendations"
       exportedActions:
         - kubernetes.troubleshoot
-      annotations:
-        llmx:description: |
-          A Kubernetes troubleshooting assistant that helps diagnose and resolve issues in your cluster.
-          This skill accepts natural language descriptions of problems and leverages knowledge of
-          Kubernetes concepts and common failure patterns to provide targeted diagnostic steps and remediation advice.
-          It can help identify issues related to pod failures, networking problems, resource constraints,
-          configuration errors and more. The assistant will analyze the situation and suggest appropriate kubectl
-          commands and configuration changes to resolve the issue.

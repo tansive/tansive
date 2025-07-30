@@ -95,6 +95,11 @@ func (a *AuditLogConfig) GetPath() string {
 	return a.Path
 }
 
+// TangentConfig holds tangent-related configuration
+type TangentConfig struct {
+	OnboardingKey string `toml:"onboarding_key"`
+}
+
 // ConfigParam holds all configuration parameters for the catalog service
 type ConfigParam struct {
 	// Configuration version
@@ -107,6 +112,7 @@ type ConfigParam struct {
 	HandleCORS         bool   `toml:"handle_cors"`           // Whether to handle CORS
 	MaxRequestBodySize int64  `toml:"max_request_body_size"` // Maximum size of request body in bytes
 	SupportTLS         bool   `toml:"support_tls"`           // Whether to support TLS
+	RuntimeConfigDir   string `toml:"runtime_config_dir"`    // Path for runtime config. This must be a location with access restrictions such as home directory.
 	TLSCertFile        string `toml:"tls_cert_file"`         // Path to TLS certificate file
 	TLSKeyFile         string `toml:"tls_key_file"`          // Path to TLS key file
 	TLSCertPEM         []byte `toml:"-"`                     // PEM encoded TLS certificate
@@ -122,9 +128,10 @@ type ConfigParam struct {
 	Auth AuthConfig `toml:"auth"`
 
 	// Single user mode configuration
-	SingleUserMode   bool   `toml:"single_user_mode"`   // Whether to run in single user mode
-	DefaultTenantID  string `toml:"default_tenant_id"`  // Default tenant ID for single user mode
-	DefaultProjectID string `toml:"default_project_id"` // Default project ID for single user mode
+	SingleUserMode         bool   `toml:"single_user_mode"`   // Whether to run in single user mode
+	SingleUserPasswordHash string `toml:"-"`                  // Password for single user mode
+	DefaultTenantID        string `toml:"default_tenant_id"`  // Default tenant ID for single user mode
+	DefaultProjectID       string `toml:"default_project_id"` // Default project ID for single user mode
 
 	// Database configuration
 	DB struct {
@@ -135,6 +142,9 @@ type ConfigParam struct {
 		Password string `toml:"password"` // Database password
 		SSLMode  string `toml:"sslmode"`  // SSL mode for database connection
 	} `toml:"db"`
+
+	// Tangent configuration
+	Tangent TangentConfig `toml:"tangent"`
 }
 
 var cfg *ConfigParam

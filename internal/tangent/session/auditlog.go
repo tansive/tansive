@@ -18,6 +18,8 @@ type auditLogInfo struct {
 	auditLogger      zerolog.Logger
 	auditLogComplete chan string
 	auditLogPubKey   []byte
+	auditLogCancel   context.CancelFunc
+	auditLogPath     string
 }
 
 // GetAuditLogPath generates the file path for a session's audit log.
@@ -38,7 +40,7 @@ func InitAuditLog(ctx context.Context, session *session) apperrors.Error {
 	session.auditLogInfo.auditLogger = session.getLogger(TopicAuditLog).With().Str("actor", "system").Logger()
 	session.auditLogInfo.auditLogPubKey = config.GetRuntimeConfig().LogSigningKey.PublicKey
 	session.auditLogInfo.auditLogComplete = make(chan string, 1)
-
+	session.auditLogInfo.auditLogPath = auditLogPath
 	logWriter, err := hashlog.NewHashLogWriter(auditLogPath, 100, config.GetRuntimeConfig().LogSigningKey.PrivateKey)
 	if err != nil {
 		log.Ctx(ctx).Error().Err(err).Msg("failed to create audit logger")
@@ -48,6 +50,7 @@ func InitAuditLog(ctx context.Context, session *session) apperrors.Error {
 	auditLog, unsubAuditLog := GetEventBus().Subscribe(session.getTopic(TopicAuditLog), 100)
 
 	finalizeLog := func() {
+		//TODO: Need to fix this. This log won't be written
 		session.auditLogInfo.auditLogger.Info().
 			Str("tangent_id", config.GetRuntimeConfig().TangentID.String()).
 			Str("tangent_url", config.GetURL()).

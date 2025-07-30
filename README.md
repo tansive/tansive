@@ -5,27 +5,49 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/tansive/tansive)](https://goreportcard.com/report/github.com/tansive/tansive)
 [![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/tansive/tansive?include_prereleases)](https://github.com/tansive/tansive/releases)
 
-### Open platform for Policy-Driven, Auditable, Secure AI Agents
+### Platform for Secure and Policy-driven AI Agents
 
-[Tansive](https://tansive.com) lets you securely run AI agents and tools with fine-grained policies, runtime enforcement, and tamper-evident audit logs — so you can trust what they’re doing, without locking you into any specific framework, language, or cloud.
+[Tansive](https://tansive.com) lets you securely run AI agents and tools on your own infrastructure with fine-grained policies, runtime enforcement, and tamper-evident audit logs.
 
 Understand and control:
 
-- what AI agents can access
-- which tools they can call
-- the actions they perform
-- who triggered them
+- What AI agents access
+- Which tools they can call
+- The actions they perform
+- Who triggered them
 
-All with full execution graph visibility and tamper-evident audit logs.
+All with full execution graph visibility and audit logs.
 
-Developers can embed agent workflows into existing apps or build new solutions on top of their data — in their current programming language, without learning complex SDKs or specialized frameworks.
+Tansive enables you to build and deploy agents on your own infrastructure, independent of external platforms. Your agents operate within your secure boundaries and access your data and systems according to your defined policies.
 
-Ops teams can run agents just like they run APIs and services today — declaratively, securely, and with full observability and compliance.
+**For Developers:** Define what tools each agent can use and specify runtime validation rules. Tansive enforces these policies while logging every tool call. Works with any agent framework - LangChain, CrewAI, and more.
 
-Tansive is in **early alpha (0.1.0)** — not production-ready, but functional enough to explore in real workflows.
+```bash
+$ tansive session create /skillsets/tools/deployment-tools --view devops-engineer
+Session created. MCP endpoint:
+https://127.0.0.1:8627/session/mcp
+Access token: tn_7c2e4e0162df66d929666703dc67a87a
+```
 
-We’re gathering feedback from teams who care about integrating AI agents safely and governing them with clear policies and auditability.
-If these challenges matter to you, your ideas can help shape where Tansive goes next. We invite you to check out the demos, documentation, and try Tansive out.
+**For ops teams:** Tansive provides a YAML-based control plane for running AI agents and tools with policy-driven security and full observability. It includes an agent and tools catalog, a policy store, and a control plane to deploy and manage agent sessions. Via a portable runtime, agents can be deployed on VMs to serve other apps or execute tasks within your defined network boundaries or VPCs. Agents can also run on user laptops to automate their tasks. Models can be hosted anywhere that's accessible via API.
+
+```yaml
+# Example: Kubernetes troubleshooter agent policies
+spec:
+  rules:
+    - intent: Allow
+      actions:
+        - system.skillset.use
+        - kubernetes.pods.list
+        - kubernetes.troubleshoot
+      targets:
+        - res://skillsets/agents/kubernetes-agent
+    - intent: Deny
+      actions:
+        - kubernetes.deployments.restart
+      targets:
+        - res://skillsets/agents/kubernetes-agent
+```
 
 ---
 
@@ -33,14 +55,20 @@ If these challenges matter to you, your ideas can help shape where Tansive goes 
 
 - 💡 [Why Tansive?](#-why-tansive)
 - ✨ [Key Features](#-key-features)
+- 🔑 [Key Concepts](#-key-concepts)
+- 🔧 [How Tansive works](#-how-tansive-works)
+- 🧱 [Architecture](#-architecture)
 - 🎬 [See it in Action](#-see-it-in-action)
 - 📋 [What Works, What's Coming, and What to Expect](#-what-works-whats-coming-and-what-to-expect)
 - 🚀 [Getting Started](#-getting-started)
-  - [Architecture Diagram](#architecture-diagram)
-  - [Install Tansive](#install-tansive)
+  - [Overview](#overview)
+  - [Install Tansive](#installation)
   - [Setup a Catalog](#setup-a-catalog)
-  - [Run the Example Agents](#run-the-example-agents)
-- 📄 [Documentation](#-documentation)
+  - [Run the Example Agents](#run-the-examples)
+    - [Set up a policy-governed MCP proxy with input filtering for Github (or your favorite MCP server)](#set-up-a-policy-governed-mcp-proxy-with-input-filtering-for-github-or-your-favorite-mcp-server)
+    - [Run the Policy-driven agent](#run-the-policy-driven-agent)
+    - [Run the Secure Data Handling example](#run-the-secure-data-handling-example)
+  - [Explore the Audit Log](#explore-the-audit-log)
 - 💬 [Community and Support](#-community-and-support)
 - 💼 [License](#-license)
 - 🙏 [Contributing](#-contributing)
@@ -52,24 +80,15 @@ If these challenges matter to you, your ideas can help shape where Tansive goes 
 
 ## 💡 Why Tansive?
 
-Companies and Teams want to adopt AI agents, but face real obstacles:
+- **Secure Integration**: AI Tools and Agents need context from many systems, but integrating securely across different APIs is challenging. Tansive provides rules-based access control at every interface in the Agent pipeline.
 
-- **Context:**  
-  Agents need context from many systems, but integrating securely across APIs and data silos is hard and often requires costly new data pipelines.
+- **Reduce Operational Burden and Cost**: Deploy and manage AI Agents on your existing infrastructure - cloud, on-premise - using the same GitOps processes teams use today. Tansive is cloud-agnostic and works across clouds. Use models from anywhere.
 
-- **AI agents are non-deterministic actors:**  
-  Hard to observe and break traditional DevOps models. Current Authn models are designed for systems that behave deterministically, not for Agents. Prompt engineering and using one AI model as a guardrail for another are necessary, but not sufficient.
+- **Chained Actions amplify risk:** When agents and tools call each other, small problems have a large blast radius. Tansive provides audit logs that capture the full tool call graph and policy decisions to help trace and mitigate risks.
 
-- **Chained Actions amplify risk:**  
-  When agents and tools call each other, small problems have a large blast radius.
+- **Defend against Security Vulnerabilities**: AI tools introduce new attack vectors like prompt injections. Tansive provides the tools to implement defense-in-depth security processes to keep systems safe.
 
-- **Production Gaps:**  
-  Existing frameworks help build agents but don’t adequately address safe deployment, policy enforcement, or auditability.
-
-- **Operational Overhead:**  
-  Introducing new APIs and services that speak Agent protocols increases complexity, security surface area, and compliance burden.
-
-Tansive helps teams take agents to production safely — enforcing scoped policies, providing tamper-evident audit logs, and integrating without reinventing your stack.
+- **Meet Compliance Requirements**: Systems often have regulatory requirements to meet (SOC2, HIPAA, PCI, Data Privacy). Tansive provides policy-based control and tamper-evident logs for compliance and audits.
 
 ---
 
@@ -79,25 +98,220 @@ Tansive helps teams take agents to production safely — enforcing scoped polici
   A hierarchically structured repository of agents, tools, and contextual data, partitioned across environments like dev, stage, and prod, and segmented by namespaces for teams or components.
 
 - **Runtime Policy Enforcement**  
-  Enforce fine-grained controls over access, execution, and data flows. Every invocation is checked against policy in real time.
+  Enforce fine-grained controls over tool calls. Every invocation is checked against policy in real time.
 
-- **Immutable Constraints and Transforms**  
-  Pin runtime sessions to specific values and apply user-defined transforms to modify or redact inputs to agents and tools. Protect sensitive data (e.g. PII, Health data), apply runtime feature flags, and adapt or enrich inputs to match the expectations of your current systems without undertaking costly data migration initiatives
+- **Runtime Constraints and Transforms**  
+  Pin runtime sessions to specific values and apply user-defined transforms to modify or redact inputs to agents and tools. Protect sensitive data (e.g. PII, Health data), apply runtime feature flags, and adapt or enrich inputs to match the expectations of your current systems without undertaking costly data migration initiatives.
 
-- **Tamper-Evident Audit Logging**  
-  Maintain, hash-linked, signed logs of every action for observability, compliance, and forensic analysis.
+- **Audit Logging**  
+  Maintain hash-linked, signed logs of every action for observability, compliance, and analysis.
 
-- **Language and Framework Agnostic**  
-  Author tools and agents in any language — Python, Bash, Go, Node.js — with no mandatory SDKs.
+- **Agents in any framework**  
+  Author agents in any framework - LangGraph, CrewAI, Semantic Kernel, etc.
+
+- **Tools in any language**  
+  Author tools in any language or import tools from local or external MCP servers. Tansive will run or proxy them and create a policy-governed MCP endpoint with secure HTTP transport.
 
 - **GitOps Friendly**  
   Configure everything via declarative YAML specs version-controlled in Git, modeled on familiar cloud-native patterns.
 
 ---
 
+## 🔑 Key Concepts
+
+Before diving into how Tansive works, here are the core concepts you'll encounter:
+
+- **SkillSet**: A collection of tools and agents that work together to accomplish a specific type of task. Think of it as a template that defines what tools are available and how they should be run.
+- **View**: A policy that controls what actions are allowed in a session. Views define which capabilities (like `kubernetes.deployments.restart` or `patient.labresults.get`) are permitted.
+- **Session**: A runtime instance of a SkillSet with specific constraints applied. When you create a session, Tansive instantiates the SkillSet and applies the View policy to control access.
+- **MCP (Model Context Protocol)**: A standard protocol for AI tools to communicate with language models. Tansive creates secure MCP endpoints that expose your tools as defined by policy and applies runtime input validation and constraints.
+- **Skill**: Individual tools or agents within a SkillSet. Skills can be written in any language or framework and are the building blocks of your workflows.
+- **Capability**: Granular permissions expressed as tags (e.g., `query.sql.select`, `payments.reconcile`) that define what actions are allowed.
+
+---
+
+## 🔧 How Tansive works
+
+#### For Developers:
+
+Tansive lets developers run AI agents with controlled access to tools — you define what tools each agent can use, and Tansive enforces those rules while logging full tool call traces.
+
+- **Call tools via Tansive** from your agents written in LangGraph, CrewAI or any of your favorite frameworks, so you get filtered tool access, runtime evaluation of tool inputs, and detailed audit logs with full tool call lineage.
+
+- **Tansive as orchestrator** - Run your tools and agent code directly:
+
+  - Let Tansive run your tools written in Python, Node, Go, etc. Tansive will automatically create an MCP endpoint for your tools with authenticated HTTP transport, so you don't have to manage tokens and authorization.
+  - You can also have Tansive run your agent code directly. When you do, the agent will be subject to the same policy and runtime access constraints, giving you end-to-end control over the agent.
+
+- **Run multiple concurrent sessions** with different policies — Create a template with a collection of tools and agents tagged with _Capability_ tags, then create filters based on those tags to control what each session can do. In Tansive, a collection of tools and agents that can together accomplish a type of job is called a `SkillSet`. Policies are called `Views`.
+
+<details> <summary>Examples: Create tool and agent sessions</summary>
+
+e.g., You can create secure MCP endpoints with different roles to configure tools such as cursor. Here we use Tansive as just a tool orchestrator and proxy.
+
+```bash
+$ tansive session create /skillsets/tools/deployment-tools --view devops-engineer
+Session created. MCP endpoint:
+https://127.0.0.1:8627/session/mcp
+Access token: tn_7c2e4e0162df66d929666703dc67a87a
+```
+
+e.g., You can run a complete agent workflow with a prompt. You can also restrict the agent from accessing sensitive data.
+
+```bash
+$ tansive session create /skillsets/agents/health-record-agent \
+--view prod-view \
+--input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their
+bloodwork and tell me if there is anything wrong?","model":"claude"}' \
+--session-vars '{"patient_id":"H12345"}' --interactive
+
+# This agent session runs the agent bot with the provided prompt. We scoped the session to John's patient_id
+# so while the agent can access John's data, it cannot access Sheila's.
+```
+
+</details>
+
+#### For DevOps Engineers:
+
+Tansive provides a YAML-based control plane for running AI agents and tools with policy-driven security and observability.
+
+- Create a **Catalog** of workflows consisting of tools and agents by defining them in YAML
+- Assign them across different environments such as `dev`, `stage`, `prod`. Give teams their own namespace in each environment
+- Define access and runtime policies in YAML based on environments and namespaces
+- Deploy workflows with policy-based access controls
+- Deploy tools and agents across different VPCs depending on systems they need to access
+- Integrate AI agent deployment with your existing CI/CD processes
+
+<details> <summary>Example YAML definition of a SkillSet</summary>
+
+This example shows how to define a health record agent SkillSet with multiple tools and model configurations:
+
+```yaml
+spec:
+  version: "0.1.0"
+  sources:
+    - name: resolve-patient-id
+      runner: "system.stdiorunner"
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "node"
+        script: "resolve-patient-id.js"
+        security:
+          type: default
+    - name: patient-bloodwork
+      runner: "system.stdiorunner"
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "python"
+        script: "patient_bloodwork.py"
+        security:
+          type: default
+    - name: agent-script
+      runner: "system.stdiorunner"
+      config:
+        version: "0.1.0-alpha.1"
+        runtime: "python"
+        script: "run-llm.py"
+        security:
+          type: default
+  context:
+    - name: claude
+      schema:
+        type: object
+        properties:
+          apiKey:
+            type: string
+          model:
+            type: string
+        required:
+          - apiKey
+          - model
+      value:
+        apiKey: { { .ENV.CLAUDE_API_KEY } }
+        model: claude-3-7-sonnet-latest
+    - name: gpt4o
+      schema:
+        type: object
+        properties:
+          apiKey:
+            type: string
+          model:
+            type: string
+        required:
+          - apiKey
+          - model
+      value:
+        apiKey: { { .ENV.OPENAI_API_KEY } }
+        model: gpt-4o
+  skills:
+    - name: resolve-patient-id
+      source: resolve-patient-id
+      description: "Resolve patient ID"
+      inputSchema:
+        type: object
+        properties:
+          name:
+            type: string
+            description: "Patient name"
+        required:
+          - name
+      outputSchema:
+        type: string
+        description: "Patient ID"
+      exportedActions:
+        - patient.id.resolve
+      annotations:
+        llm:description: |
+          Resolve the patient ID from the patient's name.
+          This skill is used to resolve the patient ID from the patient's name.
+          It requires the patient name as input and will return the patient ID in json.
+```
+
+</details>
+
+---
+
+## 🧱 Architecture
+
+### Functional Architecture of a Tansive Session
+
+This diagram shows how Tansive orchestrates tools, policies, and agents within a session runtime:
+
+![Tansive Functional Architecture](media/tansive-functional-arch.svg)
+
+When you create a session, Tansive creates a runtime instance of the **SkillSet** constrained by the specified **View**. A SkillSet is a YAML template that specifies all the tools and agents involved in accomplishing a specific type of task (e.g., placing an order based on availability of inventory). It includes information on how to run them and what capabilities they expose.
+
+A **View** is a policy that specifies what capabilities are permitted to be used in a session. Capabilities are expressed via tags such as `kubernetes.deployments.restart` or `query.sql.update` that you define at your desired level of granularity.
+
+At the core of a Tansive session is the **Tool Call Router**. Tools can be added to the router from various sources:
+
+- **Remote MCP Servers:** MCP (Model Context Protocol) endpoints hosted by external resources that use HTTP transport
+- **Local MCP Servers:** MCP servers that use stdio transport and access external resources via REST API, gRPC, or other protocols
+- **Local Scripts:** Simple run-once-and-exit tools written in any language. These tools are run by Tansive with JSON arguments and print results to standard output or error
+
+When a session is created, Tansive automatically creates an MCP endpoint using authenticated HTTP transport:
+
+- Only the tools specified by the View policy associated with the session are exposed via the endpoint
+- The router applies tool input transformations specified in the SkillSet at runtime before tool calls are dispatched
+- All tool calls, their inputs, and policy evaluation decisions are logged with the rules that supported each decision
+
+Agents can integrate with Tansive in two modes:
+
+- **Tansive-managed agents:** Tansive runs the agent directly, applying the same View policies. This provides end-to-end control over the entire pipeline. The agent accesses tools via the Tansive SkillSet service using Unix Domain Socket transport. Upcoming releases will add support for Tansive-managed agents to access tools via MCP.
+
+- **Independent agents:** Agents run independently, but Tansive governs their tool access. This mode covers agents in tools such as Cursor, Claude Desktop, and similar applications.
+
+---
+
 ## 🎬 See it in Action
 
-Below are examples showing how Tansive enforces policies and protects sensitive data:
+### Policy-governed secure MCP tools proxy for IDEs such as Cursor, Copilot, Claude, etc
+
+If you are using tools like Cursor, Copilot, Claude, etc with MCP servers such as Github's, [read this article](https://docs.tansive.io/blog/implementing-defense-prompt-injection-attacks-mcp) on how Tansive can be used to set up use-case or role based policies to defend against unintended agent actions or prompt injection vulnerabilities.
+
+### Examples of secure, policy-driven agents
+
+Below examples show how Tansive enforces policies and protects sensitive data:
 
 **What you'll see**
 
@@ -269,27 +483,38 @@ We locked the session to John's `patient_id` via Session Variables during Sessio
 
 ## 📋 What Works, What’s Coming, and What to Expect
 
-Tansive is in early alpha, which means core functionality is working but there's still plenty to build. Here's what you can expect:
+Tansive is in alpha and under active development. Here's what you can expect:
 
 **What you can do today:**
 
 You can do the following in non-production environments:
 
-✅ Deploy agents for real workflows such as analyzing support tickets, restart failed services in dev environment, or validate data before orders are processed  
+✅ Deploy policy-based filter and input validation for MCP tools that you use with Cursor, Claude, Windsurf, etc. You can create them under different roles that you can toggle in cursor.
+
+- Only tools with `stdio` transport are supported in this release - which includes a large number of tools. See Roadmap below for other transports.
+- You can also write your own MCP tools using `stdio` transport and Tansive will run it.
+- Tansive will automatically create an MCP endpoint with secure HTTP transport and bearer token authentication that you can configure in your IDEs.
+
+✅ Deploy interactive agents for real workflows such as analyzing support tickets, restart failed services in dev environment, or validate data before orders are processed.  
 ✅ Enforce policies like "This agent can only access customer data for tier 1 support cases"  
 ✅ Use session pinning to enforce data access controls like "This session can only access prospect data for the current lead"  
-✅ Write tools in Python, Node.js, Bash or any compiled language (binary invocation)  
-✅ Deploy your agent catalog and apply policies declaratively  
+✅ Write simple run-once-and-exit tools in Python, Node.js, Bash or any compiled language. In the current release, these tools are only exposed to Agents via the Tansive SkillSet service - an internal toolcall interface.  
+✅ Deploy your agent catalog, write and apply policies declaratively in `yaml`.  
 ✅ Single User only
 
 **What's coming:**
 
-- Multi-User mode with project support
-- Support for external Resources such as secret stores, vector DBs, conversational memory, cache
-- Prometheus endpoint for observability
-- Performance optimizations
-- Additional security features
+Target: Mid August, 2025:
+
+- All tools are exported via Tansive's secure MCP endpoint as well as Tansive's SkillSet interface.
+- Support for multiple MCP servers in one Tansive SkillSet. This allows one to compose rich workflows combining multiple systems.
+- Support for remote MCP servers
 - Better documentation and examples
+
+Target: Mid September, 2025:
+
+- Support for multiple users
+- Secure onboarding of Tangents
 
 **Alpha expectations:**
 
@@ -309,66 +534,211 @@ You can do the following in non-production environments:
 
 ## 🚀 Getting Started
 
-Read the full Installation and Getting Started guide at [docs.tansive.io](https://docs.tansive.io/getting-started)
+### Overview
 
-> **Note:** Tansive is currently in **0.1-alpha** and rapidly evolving. Expect rough edges — your feedback is welcome!
+- You'll install Tansive in just a few minutes
+- Run two quick examples
+  - **Policy-Driven Agent**: Watch how Tansive controls agent and tool invocations in real time with fine-grained policies. Instantly see which actions are allowed or denied, and why.
+  - **Secure Data Handling**: Learn how Tansive protects sensitive information using pinned session variables working alongside a user-defined transform.
+- If you just want to learn how Tansive works without installing anything, skip ahead to [Setup a Catalog](#setup-a-catalog). The output of all hands-on examples is provided so you can easily follow along.
 
-### Architecture Diagram
+### Installation
 
-This diagram is to set the context for the docker all-in-one quickstart image we'll use in this section. To learn about the architecture of Tansive, visit: [Concepts and Architecture](https://docs.tansive.io/concepts)
+🕒 Total time: 5-7 minutes
 
-Below is a high-level view of how Tansive components connect.
+#### Prerequisites
 
+- Latest stable version of Docker desktop or Docker Engine [🔗](https://www.docker.com/get-started/)
+- Git
+- **Platform Support :**
+  - **macOS** (Apple Silicon and x86_64) and **Linux** (x86_64 and arm64) are fully supported and tested.
+  - on **Windows 11:**
+    - Tansive CLI client is supported natively. Git Bash or WSL2 is recommended.
+    - Tansive Server and Runtime are supported under WSL2
+  - Docker containers
+- There are no additional requirements for running the policy-governed MCP proxy example.
+- An OpenAI or Anthropic API key is required to run the agent examples.
+  - The example scripts use the OpenAI Python SDK.
+  - Each run consumes approximately 10,000 input tokens and 1,000 output tokens.
+- No API key? No Problem. Sample real output is provided, so you can follow along without running the examples.
+
+Have questions or need help? [Post your question here](https://github.com/tansive/tansive/discussions/categories/need-help-getting-started-with-tansive)
+
+#### Installation Steps
+
+#### **1. Clone the Tansive repository:**
+
+```bash
+git clone https://github.com/tansive/tansive.git
+
+cd tansive
 ```
-+-----------------+      +-------------------+
-|   Tansive CLI   | ---> |  Tansive Server   |
-+-----------------+      +-------------------+
-                                 |
-                           +-------------+
-                           |   Tangent   |
-                           +-------------+
 
-```
+#### **2. Start Tansive**
 
-The Tansive Server acts as the control plane, coordinating policies, sessions, and audit logs. Tangent is the execution runtime that runs tools and agents. One or more Tangents can be registered with the server, and workloads are dispatched based on availability and capabilities. The CLI connects to the server for management and orchestration.
+Tansive Server uses PostgreSQL as the datastore.  
+ We provide a one-line setup that brings up:
 
-### Install Tansive
-
-1. **Run the Tansive Server and Tangent**
+- PostgreSQL
+- Tansive Server
+- The Tansive Runtime Agent (called **Tangent**)
 
 ```bash
 docker compose -f scripts/docker/docker-compose-aio.yaml up -d
 ```
 
-Wait for the `tangent` service to reach the `started` state. Use `--pull always` option if you have already run Tansive and need to get the latest images.
+Wait for the _tangent_ container to start before proceeding.
 
-2. **Install the CLI**
+#### **3. Install the Tansive CLI**
 
-Download the appropriate release binary named `tansive-<version>-<os>-<arch>.tar.gz` from [Releases](https://github.com/tansive/tansive/releases) or build from source.
+Choose your platform below for installation instructions:
+
+<details id="linux">
+<summary><strong>Linux</strong></summary>
+
+Download and install the Tansive CLI for Linux:
+
+**For x86_64/amd64 systems:**
 
 ```bash
-# Verify CLI installation
-tansive version
+# Download the latest release
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-linux-amd64
 
-# Configure CLI
+# Make the binary executable
+chmod +x tansive-0.1.0-alpha.5-linux-amd64
+
+# Move the binary to a directory in your PATH
+sudo install -m 0755 tansive-0.1.0-alpha.5-linux-amd64 /usr/local/bin/tansive
+
+# Clean up
+rm tansive-0.1.0-alpha.5-linux-amd64
+
+# Verify installation
+tansive version
+```
+
+**For arm64 systems:**
+
+```bash
+# Download the latest release
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-linux-arm64
+
+# Make the binary executable
+chmod +x tansive-0.1.0-alpha.5-linux-arm64
+
+# Move the binary to a directory in your PATH
+sudo install -m 0755 tansive-0.1.0-alpha.5-linux-arm64 /usr/local/bin/tansive
+
+# Clean up
+rm tansive-0.1.0-alpha.5-linux-arm64
+
+# Verify installation
+tansive version
+```
+
+</details>
+
+<details>
+<summary><strong>macOS</strong></summary>
+
+Download and install the Tansive CLI for macOS:
+
+**For x86_64 / Intel Macs:**
+
+```bash
+# Download the latest release
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-darwin-amd64
+
+# Make the binary executable
+chmod +x tansive-0.1.0-alpha.5-darwin-amd64
+
+# Move the binary to a directory in your PATH
+sudo install -m 0755 tansive-0.1.0-alpha.5-darwin-amd64 /usr/local/bin/tansive
+
+# Clean up
+rm tansive-0.1.0-alpha.5-darwin-amd64
+
+# Verify installation
+tansive version
+```
+
+**For Apple Silicon (M1/M2/M3) Macs:**
+
+```bash
+# Download the latest release
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-darwin-arm64
+
+# Make the binary executable
+chmod +x tansive-0.1.0-alpha.5-darwin-arm64
+
+# Move the binary to a directory in your PATH
+sudo install -m 0755 tansive-0.1.0-alpha.5-darwin-arm64 /usr/local/bin/tansive
+
+# Clean up
+rm tansive-0.1.0-alpha.5-darwin-arm64
+
+# Verify installation
+tansive version
+```
+
+</details>
+
+<details>
+<summary><strong>Windows</strong></summary>
+
+Download and install the Tansive CLI for Windows:
+
+**Using Git Bash:**
+
+```bash
+# Create bin directory if needed
+mkdir -p ~/bin
+
+# Download the binary
+curl -LO https://github.com/tansive/tansive/releases/download/v0.1.0-alpha.5/tansive-0.1.0-alpha.5-windows-amd64.exe
+
+# Move to bin directory and rename
+mv tansive-0.1.0-alpha.5-windows-amd64.exe ~/bin/tansive.exe
+
+# Add to PATH for current session
+export PATH="$HOME/bin:$PATH"
+
+# Add to PATH permanently (add this line to your ~/.bashrc)
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+
+# Verify installation
+tansive version
+```
+
+**Using WSL2:**
+
+WSL2 provides a Linux environment on Windows. Follow the [Linux installation instructions](#linux) above, as WSL2 is fully compatible with the Linux x86_64 binary.
+
+</details>
+
+#### **4. Configure the CLI**
+
+After installation, you'll need to configure the CLI to connect to your Tansive server.  
+In this version Tansive server operates in single user mode. So you can login directly.
+
+```bash
+# Set the server URL (default exposed by the docker install)
 tansive config --server https://local.tansive.dev:8678
 
-# Login in single user mode
-tansive login
+# Login (Replace the placeholder with a password of your choice)
+tansive login --passwd set-a-passwd
 
-# Verify status
+# Verify Status
 tansive status
 ```
 
----
-
 ### Setup a Catalog
 
-1. **Configure API Keys**
+🕒 Total time: 3 minutes
 
-Configure API Keys to run the sample agents.
+**1. Create a .env file**
 
-Create a `.env` file in the project root with your OpenAI or Anthropic API Key. Replace only the API key you want to use - keep the placeholder for keys you don't need (e.g., if you only use Claude, keep `<your-openai-key-here>` as-is).
+Create a `.env` file in your project root. Don't replace anything yet, we'll do it in the next steps.
 
 ```bash
 # Create the .env file
@@ -376,69 +746,212 @@ Create a `.env` file in the project root with your OpenAI or Anthropic API Key. 
 cat > .env << 'EOF'
 CLAUDE_API_KEY="<your-claude-key-here>"
 OPENAI_API_KEY="<your-openai-key-here>"
-
-# Note: You don’t need an actual Kubernetes cluster. This dummy config is used by the demo agent.
+# don't modify this. you don't need a kubernetes cluster!
 KUBECONFIG="YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgogIC0gbmFtZTogbXktY2x1c3RlcgogICAgY2x1c3RlcjoKICAgICAgc2VydmVyOiBodHRwczovL2Rldi1lbnYuZXhhbXBsZS5jb20KICAgICAgY2VydGlmaWNhdG9yaXR5LWRhdGE6IDxiYXNlNjQtZW5jb2RlZC1jYS1jZXJ0Pg=="
+GITHUB_TOKEN="your-token-here"
+GITHUB_CMD="/var/tangent/custom_scripts/github-mcp-server"
 EOF
 ```
 
-2. **Setup the example Catalog via declarative scripts**
+**2. Setup a Catalog**
+
+Run the setup shell script that uploads a set of `yaml` files to Tansive.
 
 ```bash
-# sets up a new catalog with dev and prod variants, and SkillSets
+# sets up a new catalog with variants called dev and prod, and SkillSets
 bash examples/catalog_setup/setup.sh
 
 # view the catalog structure that was setup
 tansive tree
 ```
 
-**Quick smoke test:** Run `tansive tree` to verify the Catalog was set up correctly.
+The Catalog is Tansive’s declarative inventory of environments, agents, and tools. Each variant (e.g., dev, prod) can contain SkillSets — collections of tools, agents, and workflows.
 
----
+The setup script creates a hierarchical Catalog of resources in Tansive and configures policies to enable the examples in the next section.
+The `tansive tree` command should show an output similar to:
 
-### Run the Example Agents
+```
+myenv ❯ tansive tree
+📁 Catalog
+├── 🧬 default
+├── 🧬 dev
+│   └── 🌐 default
+│       └── 🧠 SkillSets
+│           ├── demo-skillsets
+│           │   ├── health-record-demo
+│           │   └── kubernetes-demo
+│           └── secure-mcp-servers
+│               └── github-mcp
+└── 🧬 prod
+    └── 🌐 default
+        └── 🧠 SkillSets
+            └── demo-skillsets
+                └── kubernetes-demo
+```
 
-Run the agents shown in the "[See it in Action](#-see-it-in-action)" section.
+### Run the examples
 
-**Run the Kubernetes Troubleshooter Agent (Control agent actions via scoped Policy)**
+#### Set up a policy-governed MCP proxy with input filtering for Github (or your favorite MCP server)
 
-You don't need a cluster. The tools sends mock data.
+In this example, we will use Tansive to create a policy-governed tool proxy for popular MCP servers such as Github and configure with popular IDEs/utilities like Cursor, Windsurf, Copilot, Claude Desktop, etc. so you can protect against inappropriate or unintended agent actions or agents exposed to prompt injection risks.
 
-Change `model` to "gpt4o" or "claude" depending on the API Key
+Refer to [this article](https://docs.tansive.io/blog/implementing-defense-prompt-injection-attacks-mcp) to learn more about new security risks presented by LLM-backed agents and how Tansive provides the tools to enable effective defense.
+
+<details><summary>Click to expand instructions</summary>
+
+In the current version, Tansive supports running MCP Servers with `stdio` transport. Download the latest version of Github MCP Server from the [official release package](https://github.com/github/github-mcp-server/releases). Pick the latest version. Tansive is tested with 0.7.0 and should work with more latest versions as long as there are no tool name changes. Run the following commands from the project root.
 
 ```bash
-# Run in 'dev' environment (agent will redeploy a pod)
+mkdir -p custom_scripts
+cd custom_scripts
+# Choose the appropriate OS and arch compatible with your system
+curl -LO https://github.com/github/github-mcp-server/releases/download/v0.7.0/github-mcp-server_Linux_x86_64.tar.gz
+tar -xvf github-mcp-server_Linux_x86_64.tar.gz
+```
+
+> Note: Tansive can run docker distributions. However, in this setup we are running Tansive itself in docker, and therefore running an MCP server packaged in docker would involve DIND or mounting the docker UDS.
+
+Open the `.env` file in your favorite editor and replace the placeholder value GITHUB_TOKEN with your actual access token created from your Github personal settings.
+
+```bash
+# Run the setup script again to update the resources
+bash examples/catalog_setup/setup.sh
+
+```
+
+The setup scripts already created job function based View policies like developer, tester, devops-engineer etc.  
+Create a policy-filtered MCP endpoint as below:
+
+```bash
+tansive session create /secure-mcp-servers/github-mcp/github-mcp-server --view developer
+```
+
+You can run multiple concurrent sessions with different profiles and add them to your IDE like cursor and switch between them.
+
+Read the [documentation for the Github MCP example](examples/README.md) for how the roles are configured and what capabilities they enable. You can modify the example to suit your needs or use it as a template for configuring another MCP server.
+
+</details>
+
+#### Run the Policy-driven agent
+
+In this example, you'll simulate an agent solving a Kubernetes incident. You'll create a catalog, define tools and policies, and watch how Tansive enforces them differently across environments - without needing a real cluster.
+
+<details><summary>Click to expand instructions</summary>
+
+> Before running this example, you have to configure an API Key for either OpenAI or Anthropic. Open the .env file and replace the placeholder with the API Key.
+
+**Scenario**
+
+This is a fictional debugging scenario involving an e-commerce application deployed on Kubernetes. The application is unable to take orders, and you'll use an AI Agent to investigate the issue.
+
+Two tools are available to the agent:
+
+**`list-pods`** - lists the status of running pods using a label selector.
+
+**`restart-deployment`** - restarts a deployment by name.
+
+Both tools are shell scripts that return mock output formatted like `kubectl`, so you can run the example without needing a real Kubernetes cluster. The tools are implemented in `skillset_scripts/tools_script.sh`
+
+The purpose of this example is to show how Tansive enforces policy at runtime. Specifically, we'll **block** the use of `restart-deployment` in the _prod_ environment, but **allow** it in _dev_ environment.
+
+> In Tansive, agents and tools are called **Skills** and a collection of Skills along with their run time context is called a **SkillSet**
+
+**Run the Skill**
+
+Start a session in the **dev** environment using the `k8s_troubleshooter` Skill:
+
+> **Note for Windows Git Bash:**
+> Add a `/` in front of the skill path. For example:
+> `//demo-skillsets/kubernetes-demo/k8s_troubleshooter`
+
+If you provided a CLAUDE-API-KEY, change the `"model"` value to `"claude"`
+
+```bash
 tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
 --view dev-view \
---input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"claude"}'
-
-
-# Run in 'prod' environment. (policy will block redeployment)
-tansive session create /demo-skillsets/kubernetes-demo/k8s_troubleshooter \
---view prod-view \
---input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"claude"}'
+--input-args '{"prompt":"An order-placement issue is affecting our e-commerce system. Use the provided tools to identify the root cause and take any necessary steps to resolve it.","model":"gpt4o"}' \
+--interactive
 ```
 
-**Run the Health Bot Agent (Protect sensitive PHI data via session pinning)**
+Run the same session in the **prod** environment to see how Tansive blocks `restart-deployment`. Replace `dev-view` with `prod-view` in the above example.
+
+</details>
+
+#### Run the Secure Data Handling example
+
+In this hands-on example, you'll simulate a health bot that answers medical questions while enforcing strict access controls. You'll see how Tansive can protect Personal Health Information (PHI) in real time.
+
+<details><summary>Click to expand instructions</summary>
+
+**Scenario**
+
+This is a fictional debugging scenario involving a health bot that answers questions about an authenticated caller's health.
+
+Two tools are available to the agent:
+
+**`resolve-patient-id`** - provides the ID of a patient (`patient_id`), given their name. This tool is written in Javascript `skillset_scripts/resolve-patient-id.js`
+
+**`patient-bloodwork`** - returns patient's blood test results, given their `patient_id`. This tool is written in Python `skillset_scripts/patient_bloodwork.py`
+
+The purpose of this example is to show how Tansive can be used to validate and filter inputs to enforce data boundaries. Specifically, you'll **pin the session** to John's `patient_id` so that any attempt to access records for other patients, like Sheila, will be blocked automatically.
+
+**Run the Skill**
+
+Start a session in the **dev** environment using the `health-record-agent` Skill:
+
+> **Note for Windows Git Bash:**
+> Add a `/` in front of the skill path.
+> For example: `//demo-skillsets/health-record-demo/health-record-agent`
+
+If you provided a CLAUDE-API-KEY, change the `"model"` value to `"claude"`
 
 ```bash
-# Run the Health Bot with Session pinned to John's patient_id
 tansive session create /demo-skillsets/health-record-demo/health-record-agent \
---view dev-view --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"claude"}' \
---session-vars '{"patient_id":"H12345"}'
+--view dev-view --input-args '{"prompt":"John Doe and Sheila Smith were looking sick. Can you please check their bloodwork and tell me if theres anything wrong?","model":"gpt4o"}' \
+--session-vars '{"patient_id":"H12345"}' --interactive
 ```
+
+</details>
+
+### Explore the Audit Log
+
+Now you’ll retrieve the audit logs for your example runs.
+
+Audit logs are different from debug logs, which are typically printed to the console or sent to external systems for indexing and search. An audit log in Tansive is an immutable, tamper-evident record of the steps and events that occurred during a session. Tansive logs audit events separately from debug logs. You can learn more about the structure and verification of audit logs in the [concepts](/docs/concepts.md) section of the docs.
+
+Get the list of sessions:
+
+```bash
+tansive session list
+```
+
+Copy a SESSION ID and paste it into the placeholder below:
+
+```bash
+tansive session audit-log get your-session-id-here -o friendly_name.tlog
+```
+
+Verify and open the log:
+
+```bash
+# Verify the log's integrity
+tansive session audit-log verify friendly_name.tlog
+
+# Generate and open a user-friendly HTML view
+tansive session audit-log view friendly_name.tlog
+```
+
+The `verify` command validates the hash chain to confirm the log has not been tampered with. The `view` command generates an HTML version of the log. You can pass `--no-open` to `view` if you prefer to create the HTML file without automatically launching your browser.
+
+> **Windows Users:** If you are using Git Bash or WSL2, the browser may not launch automatically. A `.html` file will be generated in the same directory, which you can manually double-click in Windows Explorer to open in your browser.
+
+[View sample audit log](https://docs.tansive.io/samples/friendly_name.html) generated from the Kubernetes example. This log was produced using Claude, which called `list-pods` multiple times to confirm that the deployment restarted successfully. Skill invocations are sorted by timestamp and nested to show which calls invoked others.
 
 ---
 
 ### 🙏 Ready to explore?
 
 [Get started with the docs](https://docs.tansive.io) or [start a discussion](https://github.com/tansive/tansive/discussions).
-
----
-
-## 📄 Documentation
-
-Documentation and examples are available at [https://docs.tansive.io](https://docs.tansive.io)
 
 ---
 
@@ -472,13 +985,13 @@ Built with care by a solo founder passionate about infrastructure, AI, and devel
 #### Why is this Open Source?
 
 Agents can do many different types of useful things for different people, teams, companies. While I've made opinionated choices on
-architecture, I purposely built Tansive to be easily extensible. Trust and extensibility don't work behind closed doors. If Tansive proves it is useful and builds a community of users, there are enough layers and adjacencies that Tansive and other ecosystem participants can monetize without impacting the functionality, utility, and viability of the open ecosystem.
+architecture, I purposely built Tansive to be easily extensible. Trust and extensibility don't work behind closed doors.
 
 #### Why should we trust this project now?
 
-Tansive is in early Alpha, and it's not ready for production use. But the foundations - hierarchical organization of agent and tool assets, policy-based views, dynamic runtime control via transforms, language agnostic runtime framework, tamper-evident logs, and extensible Resources and SkillSet abstractions - are designed to enable and sustain wide adoption of agents to automate day to day tasks without compromising on safety and compliance.
+Tansive is in early Alpha, and it's not ready for production use. But the foundations - hierarchical organization of agent and tool assets, policy-based views, dynamic runtime control via transforms, language and framework agnostic runtime, tamper-evident logs, and extensible SkillSet abstractions - are designed to enable and sustain wide adoption of agents to automate day to day tasks without compromising on security and compliance.
 
-I hope you will try Tansive in your non-production environments with real workloads and provide feedback on the problems you face and the capabilities you’d like Tansive to deliver. Your insights will help shape a platform that aspires to become the standard for secure, auditable, agent-driven workflows. Thank you in advance for being part of this journey.
+I hope you will try Tansive in your non-production environments with real workloads and provide feedback on the problems you face and the capabilities you’d like Tansive to deliver. Your insights will help shape a platform that aspires to become the standard for secure, agent-driven workflows. Thank you in advance for being part of this journey.
 
 #### I see a large initial commit. Where is this coming from?
 
@@ -495,11 +1008,11 @@ Tansive builds on widely adopted, well-tested open-source components, including:
 
 Additional dependencies are listed in [`go.mod`](./go.mod)
 
-📄 [Concepts and Architecture](https://docs.tansive.io/concepts)
+📄 [Concepts](/docs/concepts.md)
 
 ## 🛡️ Security Notice:
 
 Tansive is in early alpha. While built on established components, it has not undergone third-party security audits.
 Use with caution in sensitive or production environments.
 
-Read more: [Security notes for 0.1.0-alpha release](https://docs.tansive.io/architecture#current-alpha-limitations)
+Refer [SECURITY.md](/SECURITY.md)

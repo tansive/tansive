@@ -188,7 +188,7 @@ func setupTest(t *testing.T) *testSetup {
 	require.NoError(t, err)
 
 	// Login as single user
-	httpReq, _ := http.NewRequest("POST", "/auth/login", nil)
+	httpReq, _ := http.NewRequest("POST", "/auth/login?password=test", nil)
 	response := executeTestRequest(t, httpReq, nil)
 	require.Equal(t, http.StatusOK, response.Code)
 

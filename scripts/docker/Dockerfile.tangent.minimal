@@ -29,7 +29,7 @@ RUN apk add --no-cache \
 # Install only essential Python packages (using --break-system-packages for Alpine)
 RUN pip3 install --no-cache-dir --break-system-packages \
     openai langchain \
-    fastapi uvicorn aiohttp tansive-skillset-sdk
+    fastapi uvicorn aiohttp tansive-skillset-sdk sqlglot
 
 # Install only essential TypeScript tools
 RUN npm install -g typescript
@@ -51,6 +51,7 @@ RUN addgroup -g 1001 -S tangent && \
 USER root
 
 EXPOSE 8468
+EXPOSE 8627
 
 ENV WORKING_DIR=/var/tangent
 ENV SCRIPT_DIR=/var/tangent/scripts

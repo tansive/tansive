@@ -44,7 +44,7 @@ type SkillSetManager interface {
 	GetAllSkills() []Skill
 	GetAllSkillsAsLLMTools(viewDef *policy.ViewDefinition) []api.LLMTool
 	GetContext(name string) (SkillSetContext, apperrors.Error)
-	GetContextValue(name string) (types.NullableAny, apperrors.Error)
+	GetContextValue(name string, viewDef ...*policy.ViewDefinition) (types.NullableAny, apperrors.Error)
 	SetContextValue(name string, value types.NullableAny) apperrors.Error
 	GetRunnerTypes() []catcommon.RunnerID
 	ValidateInputForSkill(ctx context.Context, skillName string, input map[string]any) apperrors.Error
