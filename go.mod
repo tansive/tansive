@@ -12,7 +12,7 @@ require (
 	github.com/dop251/goja v0.0.0-20250531102226-cb187b08699c
 	github.com/fatih/color v1.18.0
 	github.com/go-chi/chi/v5 v5.2.2
-	github.com/go-chi/cors v1.2.1
+	github.com/go-chi/cors v1.2.2
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/golang/snappy v1.0.0
