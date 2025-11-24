@@ -1,6 +1,6 @@
 module github.com/tansive/tansive
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.2
 
@@ -35,7 +35,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	golang.org/x/crypto v0.40.0
-	golang.org/x/text v0.27.0
+	golang.org/x/text v0.31.0
 	gopkg.in/yaml.v3 v3.0.1
 	sigs.k8s.io/yaml v1.6.0
 )
